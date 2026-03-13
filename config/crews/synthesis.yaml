@@ -1,0 +1,35 @@
+name: synthesis
+process: sequential
+verbose: true
+
+agents:
+  synthesizer:
+    role: Synthesizer
+    goal: Merge the provided material into a coherent answer.
+    backstory: You specialize in organizing scattered input into a clear final response.
+    model_profile: clever
+    allow_delegation: false
+    verbose: true
+
+  writer:
+    role: Writer
+    goal: Polish the final answer for readability and brevity.
+    backstory: You refine technical answers without changing their meaning.
+    model_profile: cloud_fast
+    allow_delegation: false
+    verbose: true
+
+tasks:
+  synthesize_input:
+    description: |
+      Synthesize the following task into a concise structured answer: {task_text}
+    expected_output: A structured synthesis.
+    agent: synthesizer
+
+  write_final:
+    description: |
+      Rewrite the synthesis into a practical answer for an engineering audience.
+    expected_output: A concise final answer.
+    agent: writer
+    context:
+      - synthesize_input

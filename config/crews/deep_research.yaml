@@ -1,0 +1,258 @@
+name: deep_research
+process: sequential
+verbose: true
+
+agents:
+  official_source_researcher:
+    role: Official Source Researcher
+    goal: Verify the key facts for each candidate from the best available sources.
+    backstory: Prefer official pages and primary documents. Keep outputs short and literal.
+    model_profile: swarm
+    tools:
+      - searxng_search
+      - webpage_fetch
+      - pdf_fetch
+      - pdf_extract
+    allow_delegation: false
+    verbose: true
+
+  coverage_researcher:
+    role: Coverage Researcher
+    goal: Find a broad but compact candidate list that covers the user's query space.
+    backstory: Search widely, use provided source hints early, and return only a compact table.
+    model_profile: swarm
+    tools:
+      - searxng_search
+      - pdf_fetch
+      - pdf_extract
+    allow_delegation: false
+    verbose: true
+
+  pricing_researcher:
+    role: Pricing Researcher
+    goal: Verify any price, ticket, or availability details requested by the user.
+    backstory: Keep evidence short. Never estimate missing prices or dates.
+    model_profile: swarm
+    tools:
+      - searxng_search
+      - webpage_fetch
+      - pdf_fetch
+      - pdf_extract
+    allow_delegation: false
+    verbose: true
+
+  research_briefer:
+    role: Research Briefer
+    goal: Collapse multiple research outputs into one compact brief.
+    backstory: Merge upstream tables into a short, structured brief without adding new claims.
+    model_profile: clever
+    allow_delegation: false
+    verbose: true
+
+  completeness_auditor:
+    role: Completeness Auditor
+    goal: Check for missing relevant candidates and weak coverage.
+    backstory: Probe for omissions by location, date range, category, and source type.
+    model_profile: clever
+    tools:
+      - searxng_search
+      - webpage_fetch
+      - pdf_fetch
+      - pdf_extract
+    allow_delegation: false
+    verbose: true
+
+  evidence_normalizer:
+    role: Evidence Normalizer
+    goal: Merge verified facts into a strict evidence table.
+    backstory: Be literal. Preserve URLs and mark unknowns.
+    model_profile: clever
+    allow_delegation: false
+    verbose: true
+
+  senior_analyst:
+    role: Senior Research Analyst
+    goal: Produce an accurate, source-backed answer.
+    backstory: Separate confirmed facts from unconfirmed claims.
+    model_profile: clever
+    allow_delegation: false
+    verbose: true
+
+tasks:
+  map_candidate_universe:
+    description: |
+      Build a compact candidate list for: {topic}
+
+      Requirements:
+      - Identify the main entities, venues, events, or documents relevant to the query.
+      - If the query includes a PDF URL or points to PDFs, use pdf_fetch or pdf_extract early.
+      - Prefer the user-provided source hints before broadening outward.
+      - Use up to 4 focused searches.
+      - Expand coverage across obvious dimensions from the query, such as:
+        location
+        date range or season
+        venue type
+        event type or genre
+        primary source documents
+      - Include plausible candidates even if some details are not yet published, but mark them as unverified.
+      - Return at most 12 candidates total.
+      - Keep every field short.
+
+      Output format:
+      - A markdown table only.
+      - Use these columns exactly:
+        Candidate | Category | Why Relevant | Date Status | Location Status | Evidence URL | Confidence
+      - One short row per candidate.
+    expected_output: A compact candidate inventory table covering the main relevant candidates for the user's query.
+    agent: coverage_researcher
+
+  gather_official_sources:
+    description: |
+      Verify the candidate list for: {topic}
+
+      Requirements:
+      - Start from the candidate inventory in context.
+      - Prefer official sites, organizer pages, venue calendars, event pages, or primary documents.
+      - If the query points to a PDF source, inspect that PDF before making claims.
+      - Fetch a page or extract a PDF before making a claim.
+      - Verify at most the top 10 candidates from context.
+      - If a requested detail is missing, write unknown.
+      - Keep notes short.
+      - Keep the full answer under 350 words.
+
+      Output format:
+      - A markdown table only.
+      - Use these columns exactly:
+        Candidate | Key Facts | Best Source URL | Source Type | Verification Note
+      - Keep Verification Note under 12 words.
+    expected_output: A compact verification table based on primary or strongest available sources.
+    agent: official_source_researcher
+    context:
+      - map_candidate_universe
+    async_execution: true
+
+  gather_pricing_details:
+    description: |
+      Verify pricing or availability details for the candidate list in: {topic}
+
+      Requirements:
+      - Start from the candidate inventory in context.
+      - Prefer official ticket pages, official calendars, venue listings, or primary documents first.
+      - If the query points to a PDF source, inspect that PDF before making claims.
+      - Fetch a page or extract a PDF before making a claim.
+      - Verify at most the top 10 candidates from context.
+      - Capture the clearest quoted price, date, schedule, or availability detail requested by the query.
+      - If such details are missing, write unknown.
+      - Keep notes short.
+      - Keep the full answer under 300 words.
+
+      Output format:
+      - A markdown table only.
+      - Use these columns exactly:
+        Candidate | Detail | Basis | Source URL | Confidence
+      - Keep Basis under 10 words.
+    expected_output: A compact detail table with source URLs and confidence labels.
+    agent: pricing_researcher
+    context:
+      - map_candidate_universe
+    async_execution: true
+
+  assemble_research_brief:
+    description: |
+      Merge the candidate, verification, and pricing outputs into one compact brief for downstream analysis.
+
+      Requirements:
+      - Preserve only information already present in context.
+      - Do not add new claims.
+      - Keep the result compact.
+
+      Output format:
+      - A markdown section named "Candidate Summary".
+      - A markdown section named "Verification Summary".
+      - A markdown section named "Pricing Summary".
+      - A markdown section named "Open Gaps".
+      - Use short bullets only.
+      - Keep the full output under 1200 words.
+    expected_output: A compact research brief combining candidate, verification, pricing, and open-gap information.
+    agent: research_briefer
+    context:
+      - map_candidate_universe
+      - gather_official_sources
+      - gather_pricing_details
+
+  audit_coverage:
+    description: |
+      Audit the research coverage for this query: {topic}
+
+      Requirements:
+      - Check whether the candidate and verification outputs appear to cover the main relevant items for the query, not just the most obvious ones.
+      - Explicitly look for omissions by location, date range, category, and source type.
+      - Use additional searches, page fetches, and PDF extraction to investigate suspicious gaps.
+      - Name any candidates that seem likely relevant but still lack solid confirmation.
+      - Do not invent entities or events.
+
+      Output format:
+      - A markdown section named "Missing Or Weakly Covered Candidates".
+      - A markdown section named "Coverage Verdict".
+      - For each missing or weakly covered festival, include:
+        festival name
+        why it should be considered
+        current evidence URL(s)
+        what is still unknown
+    expected_output: A coverage audit that surfaces missing or weakly verified candidates.
+    agent: completeness_auditor
+    context:
+      - assemble_research_brief
+
+  normalize_evidence:
+    description: |
+      Merge the research outputs into a strict evidence table.
+
+      Hard rules:
+      - Preserve only information supported by the provided research context.
+      - If fields conflict, keep the more conservative value and note the conflict.
+      - If data is missing, write "unknown".
+      - Do not recommend actions.
+      - Do not drop candidates just because some fields are unknown.
+      - Include candidates surfaced by the coverage audit if they are plausibly relevant.
+
+      Required output:
+      - A markdown table with these columns exactly:
+        Candidate | Key Details | Availability/Price | Status | Evidence URLs | Confidence | Notes
+      - Status must be one of:
+        confirmed
+        partially confirmed
+        unconfirmed
+    expected_output: A normalized markdown evidence table with strict unknown handling.
+    agent: evidence_normalizer
+    context:
+      - assemble_research_brief
+      - audit_coverage
+
+  synthesize_final_answer:
+    description: |
+      Answer the user's query directly using the evidence table and prior research context.
+
+      Query:
+      {topic}
+
+      Requirements:
+      - Prioritize correctness over completeness.
+      - Separate "Confirmed" from "Likely Or Relevant But Not Fully Confirmed".
+      - Cover the main relevant candidates surfaced by the research, not only the most obvious ones.
+      - For every candidate mentioned, include the key details the query asks for and source URLs.
+      - If any field is not verified, say "unknown".
+      - Include a short "Coverage Gaps" section naming what still lacks publication or confirmation.
+      - If the research found a likely candidate but some details are not published, still include it in the unconfirmed table.
+      - Do not turn the answer into a plan or recommendation unless the query asks for one.
+      - Do not invent facts.
+
+      Preferred format:
+      - short intro
+      - markdown table for confirmed items
+      - markdown table for unconfirmed or partially confirmed items
+      - coverage gaps bullets
+    expected_output: A direct, evidence-backed answer with tables, URLs, and explicit unknowns.
+    agent: senior_analyst
+    context:
+      - normalize_evidence

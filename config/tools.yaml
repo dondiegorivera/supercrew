@@ -1,0 +1,37 @@
+defaults:
+  searxng_base_url_env: SEARXNG_BASE_URL
+  searxng_base_url: http://100.80.49.81:8080
+  searxng_api_key_env: SEARXNG_API_KEY
+  searxng_api_key: ""
+  crawl4ai_base_url_env: CRAWL4AI_BASE_URL
+  crawl4ai_base_url: https://agentgym.tail1ded0f.ts.net
+  crawl4ai_markdown_filter: fit
+  pdf_storage_dir_env: PDF_STORAGE_DIR
+  pdf_storage_dir: outputs/pdfs
+
+tools:
+  searxng_search:
+    class_name: SearxngSearchTool
+    enabled: true
+    max_results: 8
+    max_queries: 4
+    max_snippet_chars: 220
+
+  webpage_fetch:
+    class_name: Crawl4AIMarkdownTool
+    enabled: true
+    max_chars: 3500
+
+  pdf_fetch:
+    class_name: PDFFetchTool
+    enabled: true
+    timeout_seconds: 45
+    max_bytes: 20000000
+
+  pdf_extract:
+    class_name: PDFExtractTool
+    enabled: true
+    timeout_seconds: 45
+    max_bytes: 20000000
+    max_pages: 8
+    max_chars: 6000

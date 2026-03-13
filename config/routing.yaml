@@ -1,0 +1,52 @@
+task_types:
+  deep_research:
+    keywords:
+      - list
+      - all
+      - dates
+      - locations
+      - ticket prices
+      - official
+      - verify
+      - source
+      - deep research
+    crew_template: deep_research
+
+  parallel_research:
+    keywords:
+      - compare
+      - latest
+      - prices
+      - parallel
+      - branch
+    crew_template: parallel_research
+
+  research:
+    keywords:
+      - find
+      - research
+      - investigate
+      - gather
+      - discover
+    crew_template: research
+
+  analysis:
+    keywords:
+      - analyze
+      - evaluate
+      - reason
+      - tradeoff
+      - decide
+    crew_template: analysis
+
+  synthesis:
+    keywords:
+      - summarize
+      - rewrite
+      - present
+      - condense
+      - polish
+    crew_template: synthesis
+
+defaults:
+  fallback_template: deep_research

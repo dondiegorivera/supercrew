@@ -1,0 +1,65 @@
+from __future__ import annotations
+
+from typing import Any
+
+from crewai import Crew, Process, Task
+
+from .agent_factory import build_agents
+from .llm_registry import LLMRegistry
+
+
+PROCESS_MAP = {
+    "sequential": Process.sequential,
+    "hierarchical": Process.hierarchical,
+}
+
+
+def _build_tasks(config: dict[str, Any], agents: dict[str, Any]) -> list[Task]:
+    tasks: list[Task] = []
+    task_index: dict[str, Task] = {}
+
+    for name, task_spec in config.get("tasks", {}).items():
+        context_names = task_spec.get("context", [])
+        context_tasks = [task_index[context_name] for context_name in context_names]
+
+        task_kwargs: dict[str, Any] = {
+            "description": task_spec["description"],
+            "expected_output": task_spec["expected_output"],
+            "agent": agents[task_spec["agent"]],
+        }
+        if context_tasks:
+            task_kwargs["context"] = context_tasks
+        if "async_execution" in task_spec:
+            task_kwargs["async_execution"] = task_spec["async_execution"]
+
+        task = Task(**task_kwargs)
+        task_index[name] = task
+        tasks.append(task)
+
+    return tasks
+
+
+def build_crew(
+    config: dict[str, Any],
+    llms: LLMRegistry,
+    tools: dict[str, Any],
+) -> Crew:
+    agents = build_agents(config=config, llms=llms, tools=tools)
+    tasks = _build_tasks(config=config, agents=agents)
+
+    process_name = config.get("process", "sequential")
+    if process_name not in PROCESS_MAP:
+        raise ValueError(f"Unsupported process: {process_name}")
+
+    crew_kwargs: dict[str, Any] = {
+        "agents": list(agents.values()),
+        "tasks": tasks,
+        "process": PROCESS_MAP[process_name],
+        "verbose": config.get("verbose", True),
+    }
+
+    manager_model = config.get("manager_model")
+    if process_name == "hierarchical" and manager_model:
+        crew_kwargs["manager_llm"] = llms.get(manager_model)
+
+    return Crew(**crew_kwargs)

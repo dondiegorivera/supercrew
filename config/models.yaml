@@ -1,0 +1,38 @@
+defaults:
+  litellm_base_url_env: LITELLM_BASE_URL
+  litellm_base_url: http://100.80.49.81:4000/v1
+  litellm_api_key_env: LITELLM_API_KEY
+  litellm_api_key: replace_me
+
+models:
+  swarm:
+    provider_model: openai/local-swarm
+    temperature: 0.2
+    context_window: 6144
+    strengths:
+      - parallel_research
+      - brainstorming
+      - fanout
+    default_role: worker
+
+  clever:
+    provider_model: openai/local-clever
+    temperature: 0.2
+    context_window: 32768
+    strengths:
+      - reasoning
+      - synthesis
+      - critique
+      - medium_context_verification
+    default_role: synthesizer
+
+  cloud_fast:
+    provider_model: openai/cloud-fast
+    temperature: 0.2
+    context_window: 32000
+    strengths:
+      - fast_routing
+      - formatting
+      - fallback
+      - escalation_review
+    default_role: router

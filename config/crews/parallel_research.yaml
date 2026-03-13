@@ -1,0 +1,97 @@
+name: parallel_research
+process: sequential
+verbose: true
+
+agents:
+  fact_researcher:
+    role: Fact Researcher
+    goal: Gather concrete facts, dates, and locations from web sources.
+    backstory: You are a fast research worker focused on factual extraction.
+    model_profile: swarm
+    tools:
+      - searxng_search
+    allow_delegation: false
+    verbose: true
+
+  pricing_researcher:
+    role: Pricing Researcher
+    goal: Gather concrete ticket pricing and availability details from web sources.
+    backstory: You are a fast research worker focused on pricing and logistics.
+    model_profile: swarm
+    tools:
+      - searxng_search
+    allow_delegation: false
+    verbose: true
+
+  risk_researcher:
+    role: Risk Researcher
+    goal: Identify caveats, missing data, and confidence limits in the gathered material.
+    backstory: You are a skeptical research worker focused on uncertainty and edge cases.
+    model_profile: swarm
+    tools:
+      - searxng_search
+    allow_delegation: false
+    verbose: true
+
+  analyst:
+    role: Analyst
+    goal: Merge the parallel branches into a reliable structured recommendation.
+    backstory: You synthesize multiple evidence streams and resolve conflicts carefully.
+    model_profile: clever
+    allow_delegation: false
+    verbose: true
+
+  writer:
+    role: Writer
+    goal: Produce a short and practical final answer.
+    backstory: You compress the final recommendation into a clean engineering-style output.
+    model_profile: cloud_fast
+    allow_delegation: false
+    verbose: true
+
+tasks:
+  gather_facts:
+    description: |
+      Search the web for: {topic}
+      Focus on concrete facts, dates, locations, and named entities.
+      Return concise bullet points only.
+    expected_output: Fact bullets with dates, locations, and named items.
+    agent: fact_researcher
+    async_execution: true
+
+  gather_pricing:
+    description: |
+      Search the web for: {topic}
+      Focus on ticket prices, booking details, and availability caveats.
+      Return concise bullet points only.
+    expected_output: Pricing and availability bullets.
+    agent: pricing_researcher
+    async_execution: true
+
+  gather_risks:
+    description: |
+      Search the web for: {topic}
+      Focus on uncertainty, missing data, stale information risk, and contradictions.
+      Return concise bullet points only.
+    expected_output: Risk and confidence bullets.
+    agent: risk_researcher
+    async_execution: true
+
+  analyze_parallel_output:
+    description: |
+      Merge the parallel research outputs into a structured recommendation with sections:
+      Context, Key Findings, Risks, Confidence, Recommendation.
+    expected_output: A structured recommendation memo.
+    agent: analyst
+    context:
+      - gather_facts
+      - gather_pricing
+      - gather_risks
+
+  write_final:
+    description: |
+      Rewrite the recommendation into a crisp final answer for an engineering audience.
+    expected_output: A concise engineering-facing recommendation.
+    agent: writer
+    context:
+      - analyze_parallel_output

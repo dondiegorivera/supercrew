@@ -1,0 +1,5 @@
+name: parallel_research
+description: Exercise parallel swarm workers with clever synthesis and cloud-fast finalization.
+crew_template: parallel_research
+inputs:
+  topic: List all the Hungarian Summer Festivals for 2026 with dates, locations and ticket prices

@@ -1,0 +1,5 @@
+name: model_bakeoff
+description: Placeholder scenario for future orchestration comparisons across templates and prompts.
+crew_template: parallel_research
+inputs:
+  topic: List all the Hungarian Summer Festivals for 2026 with dates, locations and ticket prices

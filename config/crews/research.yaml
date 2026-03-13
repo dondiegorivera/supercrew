@@ -1,0 +1,56 @@
+name: research
+process: sequential
+verbose: true
+
+agents:
+  researcher:
+    role: Researcher
+    goal: Find reliable information and summarize the strongest facts and caveats.
+    backstory: You are a careful research agent who uses web search and cites concrete findings.
+    model_profile: swarm
+    tools:
+      - searxng_search
+    allow_delegation: false
+    verbose: true
+
+  analyst:
+    role: Analyst
+    goal: Reason carefully over the research and build a high-quality conclusion.
+    backstory: You are a strong reasoning agent used for synthesis and tradeoff analysis.
+    model_profile: clever
+    allow_delegation: false
+    verbose: true
+
+  writer:
+    role: Writer
+    goal: Write a concise final answer if needed.
+    backstory: You turn technical analysis into a readable recommendation.
+    model_profile: cloud_fast
+    allow_delegation: false
+    verbose: true
+
+tasks:
+  gather_research:
+    description: |
+      Search the web for: {topic}
+      Return 6 concise bullet points with the strongest facts, tradeoffs, and risks.
+    expected_output: Six concise bullet points based on web results.
+    agent: researcher
+
+  analyze_research:
+    description: |
+      Using the research from the previous task, produce a structured recommendation
+      with sections: Context, Pros, Cons, Risks, Recommendation.
+    expected_output: A structured recommendation memo.
+    agent: analyst
+    context:
+      - gather_research
+
+  write_final:
+    description: |
+      Rewrite the recommendation into a short final answer for an engineering audience.
+      Keep it crisp and practical.
+    expected_output: A short engineering-facing recommendation.
+    agent: writer
+    context:
+      - analyze_research

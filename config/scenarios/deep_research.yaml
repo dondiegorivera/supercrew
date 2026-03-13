@@ -1,0 +1,5 @@
+name: deep_research
+description: Evidence-backed deep research with official-source-first collection and explicit uncertainty handling.
+crew_template: deep_research
+inputs:
+  topic: List all the Hungarian Summer Festivals for 2026 with dates, locations and ticket prices

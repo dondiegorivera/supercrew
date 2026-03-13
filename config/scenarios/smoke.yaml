@@ -1,0 +1,5 @@
+name: smoke
+description: Default deep research scenario for evidence-backed festival queries.
+crew_template: deep_research
+inputs:
+  topic: List all the Hungarian Summer Festivals for 2026 with dates, locations and ticket prices

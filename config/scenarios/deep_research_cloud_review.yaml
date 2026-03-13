@@ -1,0 +1,5 @@
+name: deep_research_cloud_review
+description: Local-first deep research with an optional final cloud review layer.
+crew_template: deep_research_cloud_review
+inputs:
+  topic: List all the Hungarian Summer Festivals for 2026 with dates, locations and ticket prices

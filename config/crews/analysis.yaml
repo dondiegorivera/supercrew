@@ -1,0 +1,37 @@
+name: analysis
+process: sequential
+verbose: true
+
+agents:
+  analyst:
+    role: Analyst
+    goal: Reason carefully over the provided material and make a concrete recommendation.
+    backstory: You are a rigorous analyst focused on tradeoffs, constraints, and failure modes.
+    model_profile: clever
+    allow_delegation: false
+    verbose: true
+
+  writer:
+    role: Writer
+    goal: Present the analysis in a concise and practical form.
+    backstory: You translate deep technical reasoning into crisp output.
+    model_profile: cloud_fast
+    allow_delegation: false
+    verbose: true
+
+tasks:
+  analyze_input:
+    description: |
+      Analyze this task carefully: {task_text}
+      If reference material is provided, use it. Return a structured recommendation with:
+      Context, Options, Tradeoffs, Risks, Recommendation.
+    expected_output: A structured analysis.
+    agent: analyst
+
+  write_final:
+    description: |
+      Rewrite the structured analysis into a concise engineering-facing answer.
+    expected_output: A short engineering-facing answer.
+    agent: writer
+    context:
+      - analyze_input

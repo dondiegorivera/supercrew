@@ -1,0 +1,15 @@
+services:
+  crewai:
+    build: .
+    image: local/crewai-litellm:1.10.0
+    container_name: crewai-litellm-test
+    working_dir: /workspace
+    volumes:
+      - ./:/workspace
+    env_file:
+      - .env
+    entrypoint: ["python", "supercrew.py"]
+    environment:
+      AGENT_MESH_LLM_DEBUG: "1"
+      AGENT_MESH_LLM_DEBUG_DIR: "/workspace/logs/llm_debug"
+      OUTPUT_DIR: "/workspace/outputs"
