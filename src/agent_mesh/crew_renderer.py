@@ -6,7 +6,7 @@ from typing import Any
 
 import yaml
 
-from .config_loader import CONFIG_DIR
+from .config_loader import DATA_DIR
 from .crew_spec import CrewSpecPayload
 
 
@@ -53,12 +53,12 @@ def render_crew_yaml(spec: CrewSpecPayload) -> str:
 
 
 def save_generated_crew(spec: CrewSpecPayload, name: str | None = None) -> Path:
-    """Save a rendered crew YAML to config/generated_crews/.
+    """Save a rendered crew YAML to data/generated_crews/.
 
     Returns the path to the written file.
     """
     crew_name = name or spec.name
-    generated_dir = CONFIG_DIR / "generated_crews"
+    generated_dir = DATA_DIR / "generated_crews"
     generated_dir.mkdir(parents=True, exist_ok=True)
     path = generated_dir / f"{crew_name}.yaml"
     path.write_text(render_crew_yaml(spec), encoding="utf-8")

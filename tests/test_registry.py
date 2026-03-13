@@ -6,6 +6,9 @@ import sys
 import types
 from pathlib import Path
 
+import pytest
+import yaml
+
 
 SRC_DIR = Path(__file__).resolve().parents[1] / "src" / "agent_mesh"
 
@@ -42,7 +45,8 @@ TaskSpec = crew_spec_module.TaskSpec
 render_crew_dict = crew_renderer_module.render_crew_dict
 render_crew_yaml = crew_renderer_module.render_crew_yaml
 save_generated_crew = crew_renderer_module.save_generated_crew
-load_crew_config = sys.modules["agent_mesh.config_loader"].load_crew_config
+config_loader_module = sys.modules["agent_mesh.config_loader"]
+load_crew_config = config_loader_module.load_crew_config
 CrewRegistry = registry_module.CrewRegistry
 
 
@@ -90,6 +94,45 @@ def _sample_spec() -> CrewSpecPayload:
     )
 
 
+@pytest.fixture
+def isolated_paths(tmp_path, monkeypatch):
+    config_dir = tmp_path / "config"
+    data_dir = tmp_path / "data"
+    (config_dir / "crews").mkdir(parents=True)
+    (config_dir / "generated_crews").mkdir(parents=True)
+    seed_registry = {
+        "crews": {
+            "research": {
+                "source": "manual",
+                "description": "Research crew",
+                "tags": ["research"],
+                "query_archetypes": ["research {topic}"],
+                "required_tools": ["searxng_search"],
+                "required_capabilities": [],
+                "agent_count": 3,
+                "process": "sequential",
+                "use_count": 0,
+                "success_count": 0,
+                "failure_count": 0,
+                "human_reviewed": True,
+                "created_at": "2026-03-13",
+            }
+        }
+    }
+    (config_dir / "crew_registry.yaml").write_text(
+        yaml.safe_dump(seed_registry, sort_keys=False),
+        encoding="utf-8",
+    )
+
+    monkeypatch.setattr(config_loader_module, "CONFIG_DIR", config_dir)
+    monkeypatch.setattr(config_loader_module, "DATA_DIR", data_dir)
+    monkeypatch.setattr(crew_renderer_module, "DATA_DIR", data_dir)
+    monkeypatch.setattr(registry_module, "CONFIG_DIR", config_dir)
+    monkeypatch.setattr(registry_module, "DATA_DIR", data_dir)
+
+    return {"config_dir": config_dir, "data_dir": data_dir}
+
+
 def test_render_crew_dict_structure():
     spec = _sample_spec()
     result = render_crew_dict(spec)
@@ -111,7 +154,7 @@ def test_render_crew_yaml_is_valid():
     assert "tasks" in parsed
 
 
-def test_registry_load_and_find():
+def test_registry_load_and_find(isolated_paths):
     registry = CrewRegistry()
     registry.load()
     crews = registry.list_crews()
@@ -121,7 +164,7 @@ def test_registry_load_and_find():
     assert len(candidates) > 0
 
 
-def test_registry_record_usage():
+def test_registry_record_usage(isolated_paths):
     registry = CrewRegistry()
     registry.load()
     name = registry.list_crews()[0].name
@@ -133,7 +176,7 @@ def test_registry_record_usage():
     assert entry.success_count > 0
 
 
-def test_generated_crew_round_trip():
+def test_generated_crew_round_trip(isolated_paths):
     spec = _sample_spec()
     spec.name = "roundtrip_test"
     path = save_generated_crew(spec)
@@ -144,6 +187,18 @@ def test_generated_crew_round_trip():
         assert "search" in loaded["tasks"]
     finally:
         path.unlink(missing_ok=True)
+
+
+def test_data_dir_created_on_first_load(isolated_paths):
+    data_dir = isolated_paths["data_dir"]
+    assert not data_dir.exists()
+
+    loaded = config_loader_module.load_registry_config()
+
+    assert data_dir.exists()
+    assert (data_dir / "generated_crews").exists()
+    assert (data_dir / "crew_registry.yaml").exists()
+    assert "research" in loaded["crews"]
 
 
 if __name__ == "__main__":

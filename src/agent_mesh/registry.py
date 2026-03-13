@@ -6,7 +6,7 @@ import shutil
 from pathlib import Path
 from typing import Any
 
-from .config_loader import CONFIG_DIR, load_registry_config, save_registry_config
+from .config_loader import CONFIG_DIR, DATA_DIR, load_registry_config, save_registry_config
 
 
 class CrewEntry:
@@ -111,7 +111,7 @@ class CrewRegistry:
         if not entry or entry.source != "generated":
             return None
 
-        src = CONFIG_DIR / "generated_crews" / f"{name}.yaml"
+        src = DATA_DIR / "generated_crews" / f"{name}.yaml"
         dst = CONFIG_DIR / "crews" / f"{name}.yaml"
         if not src.exists():
             return None

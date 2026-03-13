@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+import shutil
 from typing import Any
 
 import yaml
@@ -8,6 +9,7 @@ import yaml
 
 ROOT_DIR = Path(__file__).resolve().parents[2]
 CONFIG_DIR = ROOT_DIR / "config"
+DATA_DIR = ROOT_DIR / "data"
 
 
 def load_yaml(path: Path) -> dict[str, Any]:
@@ -20,6 +22,17 @@ def load_yaml(path: Path) -> dict[str, Any]:
 
 def config_path(*parts: str) -> Path:
     return CONFIG_DIR.joinpath(*parts)
+
+
+def _ensure_data_dir() -> None:
+    """Create data/ and seed registry from config/ on first run."""
+    DATA_DIR.mkdir(parents=True, exist_ok=True)
+    registry_path = DATA_DIR / "crew_registry.yaml"
+    if not registry_path.exists():
+        seed = CONFIG_DIR / "crew_registry.yaml"
+        if seed.exists():
+            shutil.copy2(seed, registry_path)
+    (DATA_DIR / "generated_crews").mkdir(parents=True, exist_ok=True)
 
 
 def load_models_config() -> dict[str, Any]:
@@ -44,14 +57,16 @@ def load_model_policy() -> str:
 
 
 def load_registry_config() -> dict[str, Any]:
-    path = config_path("crew_registry.yaml")
+    _ensure_data_dir()
+    path = DATA_DIR / "crew_registry.yaml"
     if not path.exists():
         return {"crews": {}}
     return load_yaml(path)
 
 
 def save_registry_config(data: dict[str, Any]) -> None:
-    path = config_path("crew_registry.yaml")
+    _ensure_data_dir()
+    path = DATA_DIR / "crew_registry.yaml"
     with path.open("w", encoding="utf-8") as handle:
         yaml.dump(data, handle, default_flow_style=False, sort_keys=False)
 
@@ -70,15 +85,16 @@ def load_planner_handbook() -> str:
 
 
 def load_crew_config(template_name: str) -> dict[str, Any]:
-    """Try config/crews/ first, then config/generated_crews/."""
+    """Try config/crews/ first, then data/generated_crews/."""
     primary = config_path("crews", f"{template_name}.yaml")
     if primary.exists():
         return load_yaml(primary)
-    generated = config_path("generated_crews", f"{template_name}.yaml")
+    _ensure_data_dir()
+    generated = DATA_DIR / "generated_crews" / f"{template_name}.yaml"
     if generated.exists():
         return load_yaml(generated)
     raise FileNotFoundError(
-        f"No crew config found for '{template_name}' in crews/ or generated_crews/"
+        f"No crew config found for '{template_name}' in config/crews/ or data/generated_crews/"
     )
 
 
