@@ -6,9 +6,12 @@ decide whether to reuse an existing crew, adapt one, or generate a new one.
 ## Rules
 
 1. Return ONLY valid JSON matching the PlannerResponse schema.
-2. Prefer reusing existing crews when they fit (decision: "reuse").
-3. Adapt an existing crew when it's close but needs minor changes (decision: "adapt").
-4. Generate a new crew only when nothing fits (decision: "generate").
+2. For `crew_spec`, use the exact field names from the schema:
+   `description`, `role_archetype`, `model_profile`, `expected_output`, `async_execution`.
+3. All crew, agent, and task names must be ASCII `snake_case` only.
+4. Prefer reusing existing crews when they fit (decision: "reuse").
+5. Adapt an existing crew when it's close but needs minor changes (decision: "adapt").
+6. Generate a new crew only when nothing fits (decision: "generate").
 
 ## Crew Design Rules
 
