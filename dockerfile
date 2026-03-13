@@ -6,4 +6,4 @@ RUN chmod -R a+rX /home/appuser/.local/lib/
 
 WORKDIR /workspace
 
-CMD ["python", "supercrew.py"]
+CMD ["python", "-u", "supercrew.py"]

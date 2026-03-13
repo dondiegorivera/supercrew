@@ -9,8 +9,9 @@ services:
       - ./:/workspace
     env_file:
       - .env
-    entrypoint: ["python", "supercrew.py"]
+    entrypoint: ["python", "-u", "supercrew.py"]
     environment:
+      PYTHONUNBUFFERED: "1"
       HOME: "/tmp/crewai-home"
       XDG_DATA_HOME: "/tmp/crewai-home/.local/share"
       XDG_CACHE_HOME: "/tmp/crewai-home/.cache"
