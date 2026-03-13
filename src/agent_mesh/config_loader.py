@@ -51,11 +51,9 @@ def load_registry_config() -> dict[str, Any]:
 
 
 def save_registry_config(data: dict[str, Any]) -> None:
-    import yaml as _yaml
-
     path = config_path("crew_registry.yaml")
     with path.open("w", encoding="utf-8") as handle:
-        _yaml.dump(data, handle, default_flow_style=False, sort_keys=False)
+        yaml.dump(data, handle, default_flow_style=False, sort_keys=False)
 
 
 def load_catalogs() -> dict[str, Any]:

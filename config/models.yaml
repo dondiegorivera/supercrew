@@ -37,8 +37,8 @@ models:
     max_concurrency: 4
     has_vision: false
     strengths:
-      - fast_routing
-      - formatting
-      - fallback
+      - planning
+      - reasoning
+      - synthesis
       - escalation_review
-    default_role: router
+    default_role: planner
