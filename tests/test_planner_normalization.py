@@ -178,7 +178,7 @@ def test_generate_payload_normalizes_aliases_and_ascii_names():
     assert result.decision == "generate"
     assert result.spec is not None
     assert result.spec.name == "trodelmarkt_steinfurt_finder"
-    assert result.spec.description.startswith("Generated crew for:")
+    assert result.spec.description == "trodelmarkt_steinfurt_finder"
     assert result.spec.agents[0].role_archetype == "market_searcher"
     assert result.spec.agents[0].model_profile == "swarm"
     assert result.spec.agents[2].model_profile == "clever"
