@@ -1,7 +1,6 @@
 levels:
   quick:
     max_iter: 5
-    max_execution_time: 60
     max_retry_limit: 1
     planning: false
     reasoning: false
@@ -9,7 +8,6 @@ levels:
 
   standard:
     max_iter: 15
-    max_execution_time: 180
     max_retry_limit: 2
     planning: false
     reasoning: false
@@ -17,7 +15,6 @@ levels:
 
   thorough:
     max_iter: 25
-    max_execution_time: 300
     max_retry_limit: 2
     planning: true
     reasoning: true
@@ -26,7 +23,6 @@ levels:
 
   exhaustive:
     max_iter: 40
-    max_execution_time: 600
     max_retry_limit: 3
     planning: true
     reasoning: true

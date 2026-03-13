@@ -34,7 +34,7 @@ def test_effort_levels_complete():
         assert level in config["levels"], f"Missing effort level: {level}"
         entry = config["levels"][level]
         assert "max_iter" in entry
-        assert "max_execution_time" in entry
+        assert "max_retry_limit" in entry
         assert "max_swarm_agents" in entry
 
 

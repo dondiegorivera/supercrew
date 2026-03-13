@@ -33,10 +33,6 @@ def build_agents(
         if effort_overrides:
             if "max_iter" in effort_overrides:
                 kwargs["max_iter"] = effort_overrides["max_iter"]
-            if "max_execution_time" in effort_overrides:
-                kwargs["max_execution_time"] = effort_overrides[
-                    "max_execution_time"
-                ]
             if "max_retry_limit" in effort_overrides:
                 kwargs["max_retry_limit"] = effort_overrides["max_retry_limit"]
             if effort_overrides.get("reasoning"):
