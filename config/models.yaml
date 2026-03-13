@@ -9,6 +9,8 @@ models:
     provider_model: openai/local-swarm
     temperature: 0.2
     context_window: 6144
+    max_concurrency: 16
+    has_vision: true
     strengths:
       - parallel_research
       - brainstorming
@@ -19,6 +21,8 @@ models:
     provider_model: openai/local-clever
     temperature: 0.2
     context_window: 32768
+    max_concurrency: 2
+    has_vision: false
     strengths:
       - reasoning
       - synthesis
@@ -30,6 +34,8 @@ models:
     provider_model: openai/cloud-fast
     temperature: 0.2
     context_window: 32000
+    max_concurrency: 4
+    has_vision: false
     strengths:
       - fast_routing
       - formatting
