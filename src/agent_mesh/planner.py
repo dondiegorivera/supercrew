@@ -179,6 +179,59 @@ def _repair_async_task_graph(spec: CrewSpecPayload) -> CrewSpecPayload:
     return spec.model_copy(update={"tasks": tasks})
 
 
+def _repair_agent_limit(spec: CrewSpecPayload, *, max_agents: int = 8) -> CrewSpecPayload:
+    if len(spec.agents) <= max_agents:
+        return spec
+
+    task_counts: dict[str, int] = {agent.name: 0 for agent in spec.agents}
+    sync_task_counts: dict[str, int] = {agent.name: 0 for agent in spec.agents}
+    for task in spec.tasks:
+        if task.agent in task_counts:
+            task_counts[task.agent] += 1
+            if not task.async_execution:
+                sync_task_counts[task.agent] += 1
+
+    ranked_agents = sorted(
+        enumerate(spec.agents),
+        key=lambda item: (
+            sync_task_counts.get(item[1].name, 0),
+            task_counts.get(item[1].name, 0),
+            item[0] * -1,
+        ),
+        reverse=True,
+    )
+    kept_names = {agent.name for _, agent in ranked_agents[:max_agents]}
+    kept_agents = [agent.model_copy(deep=True) for agent in spec.agents if agent.name in kept_names]
+    kept_name_set = {agent.name for agent in kept_agents}
+
+    def _replacement_agent_name(agent_name: str) -> str:
+        original_agent = next((agent for agent in spec.agents if agent.name == agent_name), None)
+        if original_agent is None:
+            return kept_agents[0].name
+
+        same_model = [
+            agent for agent in kept_agents if agent.model_profile == original_agent.model_profile
+        ]
+        same_role = [
+            agent for agent in same_model if agent.role_archetype == original_agent.role_archetype
+        ]
+        candidates = same_role or same_model or kept_agents
+        candidates = sorted(
+            candidates,
+            key=lambda agent: (task_counts.get(agent.name, 0), sync_task_counts.get(agent.name, 0)),
+        )
+        return candidates[0].name
+
+    repaired_tasks: list[Any] = []
+    for task in spec.tasks:
+        repaired_task = task.model_copy(deep=True)
+        if repaired_task.agent not in kept_name_set:
+            repaired_task.agent = _replacement_agent_name(repaired_task.agent)
+        repaired_tasks.append(repaired_task)
+
+    return spec.model_copy(update={"agents": kept_agents, "tasks": repaired_tasks})
+
+
 @dataclass
 class PlannerResult:
     decision: str
@@ -439,7 +492,7 @@ def plan_crew(
             f"but no crew_spec"
         )
 
-    spec = _repair_async_task_graph(planner_response.crew_spec)
+    spec = _repair_agent_limit(_repair_async_task_graph(planner_response.crew_spec))
     if planner_response.decision == "adapt" and planner_response.base_crew:
         base_config = load_crew_config(planner_response.base_crew)
         crew_config = _merge_adapted_crew_config(base_config, spec)

@@ -291,6 +291,89 @@ def test_generate_payload_repairs_unconsumed_async_tasks():
     ]
 
 
+def test_generate_payload_repairs_agent_limit():
+    registry = CrewRegistry()
+    registry.load()
+
+    agents = []
+    tasks = []
+    for index in range(1, 9):
+        agent_name = f"finder_{index}"
+        agents.append(
+            {
+                "name": agent_name,
+                "role_archetype": "researcher",
+                "role": f"Finder {index}",
+                "goal": f"Find festival set {index}",
+                "backstory": "",
+                "model_profile": "swarm",
+                "tools": ["searxng_search"],
+            }
+        )
+        tasks.append(
+            {
+                "name": f"search_festivals_{index}",
+                "description": f"Find festival batch {index} in {{topic}}",
+                "expected_output": f"Festival candidates batch {index}",
+                "agent": agent_name,
+                "async_execution": True,
+            }
+        )
+
+    agents.append(
+        {
+            "name": "festival_writer",
+            "role_archetype": "writer",
+            "role": "Festival Writer",
+            "goal": "Merge the research into a final answer",
+            "backstory": "",
+            "model_profile": "clever",
+            "tools": [],
+        }
+    )
+    tasks.append(
+        {
+            "name": "merge_festival_results",
+            "description": "Merge all findings into a final festival table",
+            "expected_output": "A final table with date, location, ticket price, and major bands",
+            "agent": "festival_writer",
+        }
+    )
+
+    payload = json.dumps(
+        {
+            "decision": "generate",
+            "crew_spec": {
+                "name": "hungary_music_festivals_large",
+                "description": "Large festival research crew",
+                "process": "sequential",
+                "tags": ["music", "festival"],
+                "query_archetypes": ["find festivals in {topic}"],
+                "agents": agents,
+                "tasks": tasks,
+            },
+        }
+    )
+
+    result = plan_crew(
+        task_text="all music festivals in Hungary in 2026",
+        effort="exhaustive",
+        llms=_FakeLLMs(payload),
+        registry=registry,
+        available_tools={"searxng_search", "webpage_fetch", "pdf_fetch", "pdf_extract"},
+        available_models={"swarm", "clever", "cloud_fast"},
+        model_concurrency={"swarm": 16, "clever": 2, "cloud_fast": 4},
+        force_generate=True,
+    )
+
+    assert result.spec is not None
+    assert len(result.spec.agents) == 8
+    kept_agent_names = {agent.name for agent in result.spec.agents}
+    assert "festival_writer" in kept_agent_names
+    assert all(task.agent in kept_agent_names for task in result.spec.tasks)
+    assert len(result.spec.tasks[-1].context) == 8
+
+
 if __name__ == "__main__":
     import pytest
 

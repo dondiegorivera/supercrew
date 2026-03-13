@@ -1,0 +1,67 @@
+name: generated_crew
+process: sequential
+verbose: true
+agents:
+  troedelmarkt_searcher:
+    role: researcher
+    goal: "Search web for tr\xF6delmarkt events in Kreis Steinfurt during April-May\
+      \ 2026"
+    backstory: ''
+    model_profile: swarm
+    tools:
+    - searxng_search
+    - webpage_fetch
+    allow_delegation: false
+    verbose: true
+  troedelmarkt_verifier:
+    role: deep_researcher
+    goal: Verify flea market dates from official sources and PDFs
+    backstory: ''
+    model_profile: swarm
+    tools:
+    - searxng_search
+    - webpage_fetch
+    - pdf_fetch
+    - pdf_extract
+    allow_delegation: false
+    verbose: true
+  troedelmarkt_analyst:
+    role: analyst
+    goal: Synthesize and structure verified flea market data
+    backstory: ''
+    model_profile: clever
+    tools: []
+    allow_delegation: false
+    verbose: true
+  troedelmarkt_writer:
+    role: writer
+    goal: Format final output with date, city, and city size
+    backstory: ''
+    model_profile: clever
+    tools: []
+    allow_delegation: false
+    verbose: true
+tasks:
+  search_flea_markets:
+    description: "Search the web for tr\xF6delmarkt events in Kreis Steinfurt for\
+      \ {topic}"
+    expected_output: List of potential flea market events with dates and locations
+    agent: troedelmarkt_searcher
+    async_execution: true
+  verify_official_sources:
+    description: Verify flea market dates from official city websites and PDF announcements
+    expected_output: Verified list of confirmed flea market events with sources
+    agent: troedelmarkt_verifier
+    async_execution: true
+  synthesize_findings:
+    description: Merge search results and verified sources into structured data table
+    expected_output: Structured table with date, city, and city size for each event
+    agent: troedelmarkt_analyst
+    context:
+    - search_flea_markets
+    - verify_official_sources
+  format_final_output:
+    description: Polish the final list for readability and completeness
+    expected_output: "Final formatted list of tr\xF6delmarkts with date, city, city\
+      \ size"
+    agent: troedelmarkt_writer
