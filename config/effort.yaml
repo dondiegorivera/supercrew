@@ -1,0 +1,37 @@
+levels:
+  quick:
+    max_iter: 5
+    max_execution_time: 60
+    max_retry_limit: 1
+    planning: false
+    reasoning: false
+    max_swarm_agents: 2
+
+  standard:
+    max_iter: 15
+    max_execution_time: 180
+    max_retry_limit: 2
+    planning: false
+    reasoning: false
+    max_swarm_agents: 4
+
+  thorough:
+    max_iter: 25
+    max_execution_time: 300
+    max_retry_limit: 2
+    planning: true
+    reasoning: true
+    max_reasoning_attempts: 2
+    max_swarm_agents: 8
+
+  exhaustive:
+    max_iter: 40
+    max_execution_time: 600
+    max_retry_limit: 3
+    planning: true
+    reasoning: true
+    max_reasoning_attempts: 3
+    max_swarm_agents: 16
+
+defaults:
+  effort: standard

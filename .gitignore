@@ -10,8 +10,8 @@ venv/
 # Environment
 .env
 
-# Logs
-logs/
+# Logs (runtime only — docs/logs/ is tracked)
+/logs/
 *.log
 
 # Outputs

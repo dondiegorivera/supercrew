@@ -1,0 +1,40 @@
+patterns:
+  web_search:
+    description: "Search the web for information about {topic}"
+    typical_agent_archetype: researcher
+    supports_async: true
+
+  source_verification:
+    description: "Verify claims from official/primary sources"
+    typical_agent_archetype: deep_researcher
+    supports_async: true
+
+  pricing_verification:
+    description: "Verify pricing and availability details"
+    typical_agent_archetype: deep_researcher
+    supports_async: true
+
+  coverage_audit:
+    description: "Check for missing candidates and weak coverage"
+    typical_agent_archetype: auditor
+    supports_async: false
+
+  evidence_merge:
+    description: "Merge verified facts into a strict evidence table"
+    typical_agent_archetype: normalizer
+    supports_async: false
+
+  synthesis:
+    description: "Produce a structured recommendation from gathered material"
+    typical_agent_archetype: analyst
+    supports_async: false
+
+  final_write:
+    description: "Polish the final output for the target audience"
+    typical_agent_archetype: writer
+    supports_async: false
+
+  briefing:
+    description: "Collapse multiple research outputs into one compact brief"
+    typical_agent_archetype: briefer
+    supports_async: false

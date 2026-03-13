@@ -1,0 +1,35 @@
+archetypes:
+  researcher:
+    description: "Gathers information from web sources"
+    typical_tools: [searxng_search, webpage_fetch]
+    typical_model: swarm
+
+  deep_researcher:
+    description: "Gathers and verifies from official sources, PDFs, primary documents"
+    typical_tools: [searxng_search, webpage_fetch, pdf_fetch, pdf_extract]
+    typical_model: swarm
+
+  analyst:
+    description: "Reasons over gathered material, builds structured recommendations"
+    typical_tools: []
+    typical_model: clever
+
+  auditor:
+    description: "Checks completeness, finds gaps, validates coverage"
+    typical_tools: [searxng_search, webpage_fetch]
+    typical_model: clever
+
+  writer:
+    description: "Polishes output for readability and conciseness"
+    typical_tools: []
+    typical_model: cloud_fast
+
+  normalizer:
+    description: "Merges conflicting sources into strict evidence tables"
+    typical_tools: []
+    typical_model: clever
+
+  briefer:
+    description: "Collapses multiple outputs into one compact summary"
+    typical_tools: []
+    typical_model: clever

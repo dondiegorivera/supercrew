@@ -1,0 +1,62 @@
+# Model assignment policy for the planner.
+# This file is injected into the planner prompt so the LLM knows
+# how to assign models. Edit this to tune behavior.
+
+models:
+  cloud_fast:
+    description: >
+      Cloud-hosted, most capable model. Best reasoning, fastest for its
+      quality tier. Use for crew planning itself, complex synthesis,
+      final answers on important queries, and any task where quality
+      is critical.
+    when_to_use:
+      - Crew planning (the planner call itself)
+      - Final synthesis on high-stakes or complex queries
+      - Tasks requiring the strongest reasoning
+      - Tie-breaking or adjudication between conflicting sources
+    when_not_to_use:
+      - Simple research or data gathering (overkill)
+      - Parallel worker tasks (wastes cloud budget)
+    cost_note: "Cloud — use judiciously for execution agents"
+
+  clever:
+    description: >
+      Local 27B model. Strong reasoning, good sustained analytical work.
+      Runs locally with limited concurrency (2 simultaneous).
+    when_to_use:
+      - Analysis and synthesis tasks
+      - Evidence normalization and auditing
+      - Coverage audits and completeness checks
+      - Briefing and summarization
+      - Any reasoning task that doesn't justify cloud cost
+    when_not_to_use:
+      - Parallel research branches (only 2 concurrent — use swarm)
+      - Vision/image tasks (no vision capability)
+      - Tasks needing the absolute best quality (use cloud_fast)
+    cost_note: "Free (local) — preferred for analytical work"
+
+  swarm:
+    description: >
+      Local 9B model with vision. Small but fast. The key advantage is
+      massive parallelism: up to 16 concurrent agents. Also the only
+      model with vision capability.
+    when_to_use:
+      - Parallel research branches (exploit 16-agent concurrency)
+      - First-pass data gathering and extraction
+      - Web search tasks
+      - Image/screenshot/visual analysis (only model with vision)
+      - Any task that benefits from breadth over depth
+    when_not_to_use:
+      - Complex reasoning or synthesis (too small)
+      - Final answers (quality insufficient)
+      - Tasks requiring deep analytical thinking
+    cost_note: "Free (local) — use liberally for parallel workers"
+
+assignment_rules:
+  - "Maximize swarm parallelism for research: create multiple async tasks on swarm"
+  - "Use clever for merge/synthesis after swarm branches complete"
+  - "Reserve cloud_fast for the planner call and high-value final synthesis"
+  - "Never assign vision tasks to clever or cloud_fast — only swarm has vision"
+  - "At effort=quick, use only swarm+clever (skip cloud_fast for execution)"
+  - "At effort=exhaustive, cloud_fast can be used for final synthesis"
+  - "The number of simultaneous async agents on a model must not exceed its max_concurrency"
