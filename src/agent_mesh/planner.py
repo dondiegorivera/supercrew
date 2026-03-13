@@ -1,6 +1,7 @@
 """Planner — uses cloud LLM to select or generate crew configurations."""
 from __future__ import annotations
 
+import copy
 import json
 import logging
 from dataclasses import dataclass
@@ -88,6 +89,92 @@ Return JSON matching this schema exactly:
         {"role": "system", "content": handbook},
         {"role": "user", "content": user_content},
     ]
+
+
+def _agent_config_to_spec(name: str, agent_config: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "name": name,
+        "role_archetype": str(agent_config.get("role_archetype") or name),
+        "role": agent_config["role"],
+        "goal": agent_config["goal"],
+        "backstory": agent_config.get("backstory", ""),
+        "model_profile": agent_config["model_profile"],
+        "tools": list(agent_config.get("tools", [])),
+        "allow_delegation": agent_config.get("allow_delegation", False),
+    }
+
+
+def _task_config_to_spec(name: str, task_config: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "name": name,
+        "description": task_config["description"],
+        "expected_output": task_config["expected_output"],
+        "agent": task_config["agent"],
+        "context": list(task_config.get("context", [])),
+        "async_execution": task_config.get("async_execution", False),
+    }
+
+
+def _crew_config_to_payload(
+    config: dict[str, Any],
+    *,
+    name: str,
+    description: str,
+    tags: list[str],
+    query_archetypes: list[str],
+) -> CrewSpecPayload:
+    return CrewSpecPayload(
+        name=name,
+        description=description,
+        process=config.get("process", "sequential"),
+        tags=tags,
+        query_archetypes=query_archetypes,
+        agents=[
+            _agent_config_to_spec(agent_name, agent_config)
+            for agent_name, agent_config in config.get("agents", {}).items()
+        ],
+        tasks=[
+            _task_config_to_spec(task_name, task_config)
+            for task_name, task_config in config.get("tasks", {}).items()
+        ],
+    )
+
+
+def _merge_adapted_crew_config(
+    base_config: dict[str, Any],
+    spec: CrewSpecPayload,
+) -> dict[str, Any]:
+    merged = copy.deepcopy(base_config)
+    merged["name"] = spec.name
+    merged["process"] = spec.process
+    merged["verbose"] = base_config.get("verbose", True)
+    merged.setdefault("agents", {})
+    merged.setdefault("tasks", {})
+
+    for agent in spec.agents:
+        merged["agents"][agent.name] = {
+            "role": agent.role,
+            "goal": agent.goal,
+            "backstory": agent.backstory,
+            "model_profile": agent.model_profile,
+            "tools": list(agent.tools),
+            "allow_delegation": agent.allow_delegation,
+            "verbose": True,
+        }
+
+    for task in spec.tasks:
+        task_config: dict[str, Any] = {
+            "description": task.description,
+            "expected_output": task.expected_output,
+            "agent": task.agent,
+        }
+        if task.context:
+            task_config["context"] = list(task.context)
+        if task.async_execution:
+            task_config["async_execution"] = True
+        merged["tasks"][task.name] = task_config
+
+    return merged
 
 
 def plan_crew(
@@ -180,18 +267,36 @@ def plan_crew(
         )
 
     spec = planner_response.crew_spec
-    errors = validate_crew_spec(
-        spec,
-        available_tools,
-        available_models,
-        model_concurrency,
-    )
+    if planner_response.decision == "adapt" and planner_response.base_crew:
+        base_config = load_crew_config(planner_response.base_crew)
+        crew_config = _merge_adapted_crew_config(base_config, spec)
+        merged_spec = _crew_config_to_payload(
+            crew_config,
+            name=spec.name,
+            description=spec.description,
+            tags=spec.tags,
+            query_archetypes=spec.query_archetypes,
+        )
+        errors = validate_crew_spec(
+            merged_spec,
+            available_tools,
+            available_models,
+            model_concurrency,
+        )
+    else:
+        crew_config = render_crew_dict(spec)
+        errors = validate_crew_spec(
+            spec,
+            available_tools,
+            available_models,
+            model_concurrency,
+        )
+
     if errors:
         raise ValueError(
             f"Planner generated invalid crew spec: {'; '.join(errors)}"
         )
 
-    crew_config = render_crew_dict(spec)
     return PlannerResult(
         decision=planner_response.decision,
         crew_name=spec.name,
