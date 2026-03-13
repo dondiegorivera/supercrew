@@ -46,6 +46,9 @@ def run_task(
     inputs: dict[str, Any] | None = None,
     scenario_name: str | None = None,
     crew_template: str | None = None,
+    effort: str = "standard",
+    save_name: str | None = None,
+    planner_disabled: bool = False,
 ) -> Any:
     patch_litellm_message_sanitizer()
     models_config = load_models_config()
@@ -71,8 +74,93 @@ def run_task(
         explicit_template=crew_template,
     )
 
-    crew_config = load_crew_config(template_name)
-    crew = build_crew(config=crew_config, llms=llms, tools=tools)
+    crew_config = None
+
+    if not crew_template and not scenario_name and task_text and not planner_disabled:
+        try:
+            from datetime import date
+
+            from .crew_renderer import save_generated_crew
+            from .planner import plan_crew
+            from .registry import CrewEntry, CrewRegistry
+
+            registry = CrewRegistry()
+            registry.load()
+
+            available_tools = set(tools.keys())
+            available_models = set(models_config.get("models", {}).keys())
+            model_concurrency = {
+                name: model.get("max_concurrency", 1)
+                for name, model in models_config.get("models", {}).items()
+            }
+
+            planner_result = plan_crew(
+                task_text=task_text,
+                effort=effort,
+                llms=llms,
+                registry=registry,
+                available_tools=available_tools,
+                available_models=available_models,
+                model_concurrency=model_concurrency,
+            )
+
+            crew_config = planner_result.crew_config
+            template_name = planner_result.crew_name
+
+            if planner_result.is_new and planner_result.spec:
+                generated_name = save_name or planner_result.spec.name
+                save_generated_crew(planner_result.spec, name=generated_name)
+                registry.register(
+                    CrewEntry(
+                        name=generated_name,
+                        data={
+                            "source": "generated",
+                            "description": planner_result.spec.description,
+                            "tags": planner_result.spec.tags,
+                            "query_archetypes": planner_result.spec.query_archetypes,
+                            "required_tools": sorted(
+                                {
+                                    tool_name
+                                    for agent in planner_result.spec.agents
+                                    for tool_name in agent.tools
+                                }
+                            ),
+                            "required_capabilities": [],
+                            "agent_count": len(planner_result.spec.agents),
+                            "process": planner_result.spec.process,
+                            "created_at": date.today().isoformat(),
+                            "last_used_at": None,
+                            "use_count": 0,
+                            "success_count": 0,
+                            "failure_count": 0,
+                            "human_reviewed": False,
+                            "supersedes": None,
+                            "superseded_by": None,
+                            "base_crew": planner_result.base_crew,
+                        },
+                    )
+                )
+                registry.save()
+                template_name = generated_name
+
+        except Exception:
+            import logging
+
+            logging.getLogger(__name__).warning(
+                "Planner failed, falling back to keyword routing",
+                exc_info=True,
+            )
+            crew_config = None
+
+    if crew_config is None:
+        crew_config = load_crew_config(template_name)
+
+    crew = build_crew(
+        config=crew_config,
+        llms=llms,
+        tools=tools,
+        effort=effort,
+    )
     return crew.kickoff(inputs=final_inputs)
 
 
@@ -81,6 +169,17 @@ def run_from_env() -> Any:
     scenario_name = os.getenv("SCENARIO")
     crew_template = os.getenv("CREW_TEMPLATE")
     topic = os.getenv("TOPIC")
+    effort = os.getenv("EFFORT", "standard")
+    save_name = os.getenv("CREW_SAVE_NAME")
+    planner_disabled = os.getenv("PLANNER_DISABLED", "0") in ("1", "true", "yes")
+    input_file = os.getenv("INPUT_FILE")
+
+    if input_file and not task_text:
+        from pathlib import Path
+
+        input_path = Path(input_file)
+        if input_path.exists():
+            task_text = input_path.read_text(encoding="utf-8").strip()
 
     if not scenario_name and not crew_template and not task_text:
         scenario_name = "smoke"
@@ -94,4 +193,7 @@ def run_from_env() -> Any:
         inputs=inputs or None,
         scenario_name=scenario_name,
         crew_template=crew_template,
+        effort=effort,
+        save_name=save_name,
+        planner_disabled=planner_disabled,
     )
