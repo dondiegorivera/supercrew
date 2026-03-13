@@ -5,6 +5,7 @@ from typing import Any
 from crewai import Crew, Process, Task
 
 from .agent_factory import build_agents
+from .config_loader import load_effort_config
 from .llm_registry import LLMRegistry
 
 
@@ -39,12 +40,30 @@ def _build_tasks(config: dict[str, Any], agents: dict[str, Any]) -> list[Task]:
     return tasks
 
 
+def _resolve_effort_overrides(
+    effort: str,
+    effort_config: dict[str, Any] | None = None,
+) -> dict[str, Any] | None:
+    if effort_config is None:
+        effort_config = load_effort_config()
+    levels = effort_config.get("levels", {})
+    return levels.get(effort)
+
+
 def build_crew(
     config: dict[str, Any],
     llms: LLMRegistry,
     tools: dict[str, Any],
+    effort: str = "standard",
+    effort_config: dict[str, Any] | None = None,
 ) -> Crew:
-    agents = build_agents(config=config, llms=llms, tools=tools)
+    effort_overrides = _resolve_effort_overrides(effort, effort_config)
+    agents = build_agents(
+        config=config,
+        llms=llms,
+        tools=tools,
+        effort_overrides=effort_overrides,
+    )
     tasks = _build_tasks(config=config, agents=agents)
 
     process_name = config.get("process", "sequential")
@@ -61,5 +80,9 @@ def build_crew(
     manager_model = config.get("manager_model")
     if process_name == "hierarchical" and manager_model:
         crew_kwargs["manager_llm"] = llms.get(manager_model)
+
+    if effort_overrides and effort_overrides.get("planning"):
+        crew_kwargs["planning"] = True
+        crew_kwargs["planning_llm"] = llms.get("cloud_fast")
 
     return Crew(**crew_kwargs)
