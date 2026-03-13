@@ -72,7 +72,13 @@ if [[ -n "${prompt}" ]]; then
   export TASK_TEXT="${prompt}"
 fi
 
+host_uid="$(id -u)"
+host_gid="$(id -g)"
+export LOCAL_UID="${host_uid}"
+export LOCAL_GID="${host_gid}"
+
 docker compose run --rm --build \
+  --user "${host_uid}:${host_gid}" \
   -e TASK_TEXT="${TASK_TEXT:-${prompt}}" \
   -e SCENARIO="${SCENARIO:-}" \
   -e CREW_TEMPLATE="${crew:-${CREW_TEMPLATE:-}}" \
@@ -81,4 +87,6 @@ docker compose run --rm --build \
   -e CREW_SAVE_NAME="${save_name:-${CREW_SAVE_NAME:-}}" \
   -e INPUT_FILE="${input_file:-${INPUT_FILE:-}}" \
   -e PLANNER_DISABLED="${PLANNER_DISABLED:-0}" \
+  -e LOCAL_UID="${host_uid}" \
+  -e LOCAL_GID="${host_gid}" \
   crewai
