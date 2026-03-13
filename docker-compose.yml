@@ -11,6 +11,8 @@ services:
       - .env
     entrypoint: ["python", "supercrew.py"]
     environment:
+      HOME: "/home/appuser"
+      PYTHONPATH: "/home/appuser/.local/lib/python3.13/site-packages"
       AGENT_MESH_LLM_DEBUG: "1"
       AGENT_MESH_LLM_DEBUG_DIR: "/workspace/logs/llm_debug"
       OUTPUT_DIR: "/workspace/outputs"
