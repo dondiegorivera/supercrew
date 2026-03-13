@@ -10,6 +10,15 @@ SRC_DIR = ROOT_DIR / "src"
 if str(SRC_DIR) not in sys.path:
     sys.path.insert(0, str(SRC_DIR))
 
+for env_var, default in [
+    ("HOME", "/tmp/crewai-home"),
+    ("XDG_DATA_HOME", "/tmp/crewai-home/.local/share"),
+    ("XDG_CACHE_HOME", "/tmp/crewai-home/.cache"),
+    ("XDG_CONFIG_HOME", "/tmp/crewai-home/.config"),
+]:
+    path = Path(os.environ.get(env_var, default))
+    path.mkdir(parents=True, exist_ok=True)
+
 from agent_mesh.runner import run_from_env
 
 

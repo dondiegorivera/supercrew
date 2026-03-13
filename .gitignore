@@ -12,6 +12,7 @@ venv/
 
 # Logs (runtime only — docs/logs/ is tracked)
 /logs/
+/data/
 *.log
 
 # Outputs
