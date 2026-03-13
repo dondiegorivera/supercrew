@@ -1,6 +1,6 @@
 # Supercrew
 
-A dynamic wrapper around [CrewAI](https://docs.crewai.com) that builds the right crew for your task automatically. Give it a plain-English task and it figures out which agents, tools, and models to use — or just name an existing crew for instant execution.
+A dynamic wrapper around [CrewAI](https://docs.crewai.com) that builds the right crew for your task automatically. Give it a plain-English task and it will reuse a known crew, adapt one, or generate a new crew from scratch. You can also pin an existing crew for deterministic execution.
 
 ## How it works
 
@@ -9,9 +9,9 @@ You: ./start.sh "find jazz festivals in Berlin summer 2026"
 
 Supercrew:
   1. Sends your task to a cloud LLM (via LiteLLM)
-  2. LLM picks an existing crew or designs a new one
+  2. LLM reuses, adapts, or generates a crew
   3. CrewAI agents execute the crew (search, analyze, synthesize)
-  4. Result is saved to outputs/
+  4. Result is saved to outputs/ (or /tmp/agent_mesh_outputs if needed)
 ```
 
 Three models work together through a single LiteLLM proxy:
@@ -33,17 +33,34 @@ cp .env.example .env
 ./start.sh "compare the top 3 project management tools for a small team"
 
 # Or use an existing crew directly (skips the planner)
-./start.sh --crew deep_research "music festivals in Barcelona 2026"
+./start.sh --crew research --effort quick "music festivals in Barcelona 2026"
 
 # Control how much effort agents put in
 ./start.sh --effort thorough "find all outdoor cinema events in Amsterdam"
+
+# Force a brand-new generated crew
+./start.sh --new --effort standard "find trödelmärkte in Kreis Steinfurt in April and May 2026"
 
 # Save a generated crew for reuse
 ./start.sh --save event_scout "weekend events in Munich"
 
 # Read task from a file
 ./start.sh --input input.md
+
+# Promote a good generated crew into config/crews/
+./start.sh --promote event_scout
 ```
+
+## CLI flags
+
+| Flag | Purpose |
+|------|---------|
+| `--crew NAME` | Run a specific existing crew and skip planner selection |
+| `--effort LEVEL` | Override the effort profile for the run |
+| `--save NAME` | Save the planner-generated crew for later reuse |
+| `--input FILE` | Read task text from a file |
+| `--promote NAME` | Promote a generated crew into `config/crews/` |
+| `--new` | Force the planner to start from scratch and generate a new crew |
 
 ## Effort levels
 
@@ -119,17 +136,30 @@ SEARXNG_BASE_URL=http://your-searxng:8080
 CRAWL4AI_BASE_URL=https://your-crawl4ai-instance
 EFFORT=standard              # Default effort level
 PLANNER_DISABLED=0           # Set to 1 to skip planner, use keyword routing
+FORCE_GENERATE=0             # Set to 1 to force planner generation from scratch
 ```
 
 ## Make targets
 
 ```bash
 make build    # Build the Docker image
-make run      # Run with PROMPT variable
+make run      # Run with PROMPT plus optional CREW/EFFORT/SAVE/INPUT
+make run-new  # Force planner generation from scratch
+make promote  # Promote a generated crew via PROMOTE=name
+make test     # Compile-check Python files and validate start.sh syntax
 make shell    # Open a shell with .env loaded
 make up       # Start services in background
 make down     # Stop services
 make logs     # Tail logs
+```
+
+Examples:
+
+```bash
+make run PROMPT="compare the top 3 note-taking apps"
+make run CREW=research EFFORT=quick PROMPT="find jazz festivals in Berlin 2026"
+make run-new EFFORT=standard PROMPT="find trödelmärkte in Kreis Steinfurt in April and May 2026"
+make promote PROMOTE=event_scout
 ```
 
 ## How the planner works
@@ -139,11 +169,12 @@ When you run a task without specifying `--crew`, the planner:
 1. Extracts features from your task text
 2. Checks the crew registry for existing crews that match
 3. Calls `cloud-fast` with the task, candidate crews, and building-block catalogs
-4. The LLM decides: **reuse** an existing crew, **adapt** one, or **generate** new
+4. The LLM decides: **reuse** an existing crew, **adapt** one, or **generate** a new one
 5. Generated crews are validated against strict rules before execution
 6. New crews are saved to `config/generated_crews/` for future reuse
 
 If the planner fails for any reason, the system falls back to keyword-based routing.
+If you want to bypass reuse and adaptation for a run, use `--new`.
 
 ## Crew lifecycle
 
