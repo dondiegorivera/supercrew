@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import os
 from typing import Any
 
@@ -13,8 +14,11 @@ from .config_loader import (
 )
 from .crew_builder import build_crew
 from .llm_registry import LLMRegistry
+from .registry import CrewEntry, CrewRegistry
 from .task_router import route_task
 from .tools import build_tool_registry
+
+logger = logging.getLogger(__name__)
 
 
 def _merge_inputs(base: dict[str, Any], overrides: dict[str, Any] | None) -> dict[str, Any]:
@@ -55,6 +59,7 @@ def run_task(
     tools_config = load_tools_config()
     llms = LLMRegistry(models_config)
     tools = build_tool_registry(tools_config)
+    registry: CrewRegistry | None = None
 
     scenario_inputs: dict[str, Any] = {}
     if scenario_name:
@@ -82,7 +87,6 @@ def run_task(
 
             from .crew_renderer import save_generated_crew
             from .planner import plan_crew
-            from .registry import CrewEntry, CrewRegistry
 
             registry = CrewRegistry()
             registry.load()
@@ -144,9 +148,7 @@ def run_task(
                 template_name = generated_name
 
         except Exception:
-            import logging
-
-            logging.getLogger(__name__).warning(
+            logger.warning(
                 "Planner failed, falling back to keyword routing",
                 exc_info=True,
             )
@@ -155,13 +157,26 @@ def run_task(
     if crew_config is None:
         crew_config = load_crew_config(template_name)
 
+    if registry is None:
+        registry = CrewRegistry()
+        registry.load()
+
     crew = build_crew(
         config=crew_config,
         llms=llms,
         tools=tools,
         effort=effort,
     )
-    return crew.kickoff(inputs=final_inputs)
+    try:
+        result = crew.kickoff(inputs=final_inputs)
+    except Exception:
+        registry.record_usage(template_name, success=False)
+        registry.save()
+        raise
+
+    registry.record_usage(template_name, success=True)
+    registry.save()
+    return result
 
 
 def run_from_env() -> Any:

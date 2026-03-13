@@ -8,6 +8,7 @@ crew=""
 effort=""
 save_name=""
 input_file=""
+promote_name=""
 positional_args=()
 
 # Parse flags
@@ -29,6 +30,10 @@ while [[ $# -gt 0 ]]; do
       input_file="$2"
       shift 2
       ;;
+    --promote)
+      promote_name="$2"
+      shift 2
+      ;;
     *)
       positional_args+=("$1")
       shift
@@ -37,6 +42,31 @@ while [[ $# -gt 0 ]]; do
 done
 
 prompt="${positional_args[*]:-}"
+
+if [[ -n "${promote_name}" ]]; then
+  python_cmd="python3"
+  if [[ -x ".venv/bin/python" ]]; then
+    python_cmd=".venv/bin/python"
+  fi
+
+  "${python_cmd}" - <<'PY' "${promote_name}"
+import sys
+
+sys.path.insert(0, "src")
+
+from agent_mesh.registry import CrewRegistry
+
+name = sys.argv[1]
+registry = CrewRegistry()
+registry.load()
+path = registry.promote(name)
+if path is None:
+    raise SystemExit(f"Unable to promote crew: {name}")
+registry.save()
+print(f"Promoted {name} -> {path}")
+PY
+  exit 0
+fi
 
 if [[ -n "${prompt}" ]]; then
   export TASK_TEXT="${prompt}"

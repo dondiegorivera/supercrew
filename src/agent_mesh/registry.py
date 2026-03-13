@@ -2,9 +2,11 @@
 from __future__ import annotations
 
 from datetime import date
+import shutil
+from pathlib import Path
 from typing import Any
 
-from .config_loader import load_registry_config, save_registry_config
+from .config_loader import CONFIG_DIR, load_registry_config, save_registry_config
 
 
 class CrewEntry:
@@ -102,6 +104,22 @@ class CrewRegistry:
         else:
             entry.failure_count += 1
         entry.last_used_at = date.today().isoformat()
+
+    def promote(self, name: str) -> Path | None:
+        """Copy a generated crew to config/crews/ and mark human_reviewed."""
+        entry = self._crews.get(name)
+        if not entry or entry.source != "generated":
+            return None
+
+        src = CONFIG_DIR / "generated_crews" / f"{name}.yaml"
+        dst = CONFIG_DIR / "crews" / f"{name}.yaml"
+        if not src.exists():
+            return None
+
+        shutil.copy2(src, dst)
+        entry.source = "manual"
+        entry.human_reviewed = True
+        return dst
 
     def find_candidates(
         self,
