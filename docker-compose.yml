@@ -3,6 +3,7 @@ services:
     build: .
     image: local/crewai-litellm:1.10.0
     container_name: crewai-litellm-test
+    user: "${LOCAL_UID:-1000}:${LOCAL_GID:-1000}"
     working_dir: /workspace
     volumes:
       - ./:/workspace
