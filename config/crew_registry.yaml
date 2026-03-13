@@ -1,120 +1,162 @@
 crews:
   research:
     source: manual
-    description: "Web research with analyst synthesis and final writing"
-    tags: [research, web, synthesis]
+    description: Web research with analyst synthesis and final writing
+    tags:
+    - research
+    - web
+    - synthesis
     query_archetypes:
-      - "find information about {topic}"
-      - "research {topic}"
-    required_tools: [searxng_search]
-    required_capabilities: [web]
+    - find information about {topic}
+    - research {topic}
+    required_tools:
+    - searxng_search
+    required_capabilities:
+    - web
     agent_count: 3
     process: sequential
-    created_at: "2026-03-13"
-    last_used_at: null
-    use_count: 0
-    success_count: 0
+    use_count: 1
+    success_count: 1
     failure_count: 0
     human_reviewed: true
+    created_at: '2026-03-13'
+    last_used_at: '2026-03-13'
     supersedes: null
     superseded_by: null
-
+    base_crew: null
   analysis:
     source: manual
-    description: "Analysis and reasoning over provided material"
-    tags: [analysis, reasoning]
+    description: Analysis and reasoning over provided material
+    tags:
+    - analysis
+    - reasoning
     query_archetypes:
-      - "analyze {topic}"
-      - "evaluate {topic}"
+    - analyze {topic}
+    - evaluate {topic}
     required_tools: []
     required_capabilities: []
     agent_count: 2
     process: sequential
-    created_at: "2026-03-13"
-    last_used_at: null
     use_count: 0
     success_count: 0
     failure_count: 0
     human_reviewed: true
+    created_at: '2026-03-13'
+    last_used_at: null
     supersedes: null
     superseded_by: null
-
+    base_crew: null
   synthesis:
     source: manual
-    description: "Merge and polish scattered input into concise output"
-    tags: [synthesis, writing]
+    description: Merge and polish scattered input into concise output
+    tags:
+    - synthesis
+    - writing
     query_archetypes:
-      - "summarize {topic}"
-      - "rewrite {topic}"
+    - summarize {topic}
+    - rewrite {topic}
     required_tools: []
     required_capabilities: []
     agent_count: 2
     process: sequential
-    created_at: "2026-03-13"
-    last_used_at: null
     use_count: 0
     success_count: 0
     failure_count: 0
     human_reviewed: true
+    created_at: '2026-03-13'
+    last_used_at: null
     supersedes: null
     superseded_by: null
-
+    base_crew: null
   parallel_research:
     source: manual
-    description: "Parallel fact/pricing/risk branches merged by analyst"
-    tags: [research, parallel, pricing, risk]
+    description: Parallel fact/pricing/risk branches merged by analyst
+    tags:
+    - research
+    - parallel
+    - pricing
+    - risk
     query_archetypes:
-      - "compare {topic}"
-      - "find prices for {topic}"
-    required_tools: [searxng_search]
-    required_capabilities: [web, parallel]
+    - compare {topic}
+    - find prices for {topic}
+    required_tools:
+    - searxng_search
+    required_capabilities:
+    - web
+    - parallel
     agent_count: 5
     process: sequential
-    created_at: "2026-03-13"
-    last_used_at: null
     use_count: 0
     success_count: 0
     failure_count: 0
     human_reviewed: true
+    created_at: '2026-03-13'
+    last_used_at: null
     supersedes: null
     superseded_by: null
-
+    base_crew: null
   deep_research:
     source: manual
-    description: "Multi-agent deep research with coverage audit and evidence normalization"
-    tags: [research, deep, events, pricing, verification, pdf]
+    description: Multi-agent deep research with coverage audit and evidence normalization
+    tags:
+    - research
+    - deep
+    - events
+    - pricing
+    - verification
+    - pdf
     query_archetypes:
-      - "list all {category} in {location}"
-      - "find {category} with dates and prices"
-      - "deep research {topic}"
-    required_tools: [searxng_search, webpage_fetch, pdf_fetch, pdf_extract]
-    required_capabilities: [web, pdf, parallel]
+    - list all {category} in {location}
+    - find {category} with dates and prices
+    - deep research {topic}
+    required_tools:
+    - searxng_search
+    - webpage_fetch
+    - pdf_fetch
+    - pdf_extract
+    required_capabilities:
+    - web
+    - pdf
+    - parallel
     agent_count: 7
     process: sequential
-    created_at: "2026-03-13"
-    last_used_at: null
     use_count: 0
     success_count: 0
     failure_count: 0
     human_reviewed: true
+    created_at: '2026-03-13'
+    last_used_at: null
     supersedes: null
     superseded_by: null
-
+    base_crew: null
   deep_research_cloud_review:
     source: manual
-    description: "Deep research with cloud-powered final review"
-    tags: [research, deep, verification, cloud]
+    description: Deep research with cloud-powered final review
+    tags:
+    - research
+    - deep
+    - verification
+    - cloud
     query_archetypes:
-      - "thoroughly research {topic}"
-    required_tools: [searxng_search, webpage_fetch, pdf_fetch, pdf_extract]
-    required_capabilities: [web, pdf, parallel, cloud_review]
+    - thoroughly research {topic}
+    required_tools:
+    - searxng_search
+    - webpage_fetch
+    - pdf_fetch
+    - pdf_extract
+    required_capabilities:
+    - web
+    - pdf
+    - parallel
+    - cloud_review
     agent_count: 7
     process: sequential
-    created_at: "2026-03-13"
-    last_used_at: null
     use_count: 0
     success_count: 0
     failure_count: 0
     human_reviewed: true
+    created_at: '2026-03-13'
+    last_used_at: null
     supersedes: null
     superseded_by: null
+    base_crew: null
