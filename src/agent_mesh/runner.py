@@ -53,6 +53,7 @@ def run_task(
     effort: str = "standard",
     save_name: str | None = None,
     planner_disabled: bool = False,
+    force_generate: bool = False,
 ) -> Any:
     patch_litellm_message_sanitizer()
     models_config = load_models_config()
@@ -106,6 +107,7 @@ def run_task(
                 available_tools=available_tools,
                 available_models=available_models,
                 model_concurrency=model_concurrency,
+                force_generate=force_generate,
             )
 
             crew_config = planner_result.crew_config
@@ -148,6 +150,8 @@ def run_task(
                 template_name = generated_name
 
         except Exception:
+            if force_generate:
+                raise
             logger.warning(
                 "Planner failed, falling back to keyword routing",
                 exc_info=True,
@@ -187,6 +191,7 @@ def run_from_env() -> Any:
     effort = os.getenv("EFFORT", "standard")
     save_name = os.getenv("CREW_SAVE_NAME")
     planner_disabled = os.getenv("PLANNER_DISABLED", "0") in ("1", "true", "yes")
+    force_generate = os.getenv("FORCE_GENERATE", "0") in ("1", "true", "yes")
     input_file = os.getenv("INPUT_FILE")
 
     if input_file and not task_text:
@@ -211,4 +216,5 @@ def run_from_env() -> Any:
         effort=effort,
         save_name=save_name,
         planner_disabled=planner_disabled,
+        force_generate=force_generate,
     )

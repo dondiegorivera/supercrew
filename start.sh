@@ -9,6 +9,7 @@ effort=""
 save_name=""
 input_file=""
 promote_name=""
+force_generate="0"
 positional_args=()
 
 # Parse flags
@@ -33,6 +34,10 @@ while [[ $# -gt 0 ]]; do
     --promote)
       promote_name="$2"
       shift 2
+      ;;
+    --new)
+      force_generate="1"
+      shift
       ;;
     *)
       positional_args+=("$1")
@@ -87,6 +92,7 @@ docker compose run --rm --build \
   -e CREW_SAVE_NAME="${save_name:-${CREW_SAVE_NAME:-}}" \
   -e INPUT_FILE="${input_file:-${INPUT_FILE:-}}" \
   -e PLANNER_DISABLED="${PLANNER_DISABLED:-0}" \
+  -e FORCE_GENERATE="${force_generate:-${FORCE_GENERATE:-0}}" \
   -e LOCAL_UID="${host_uid}" \
   -e LOCAL_GID="${host_gid}" \
   crewai

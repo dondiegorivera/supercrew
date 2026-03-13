@@ -27,17 +27,14 @@ def _resolve_output_dir() -> Path:
     raise OSError("No writable output directory available.")
 
 
-def _save_result(result: object) -> Path | None:
-    try:
-        output_dir = _resolve_output_dir()
-    except OSError:
-        return None
-
-    timestamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
-    result_text = str(result)
-    scenario = os.getenv("SCENARIO", "smoke")
-    task_text = os.getenv("TASK_TEXT") or os.getenv("TOPIC")
-
+def _write_result_files(
+    output_dir: Path,
+    *,
+    timestamp: str,
+    scenario: str,
+    result_text: str,
+    task_text: str | None,
+) -> Path:
     text_path = output_dir / f"{timestamp}_{scenario}.txt"
     latest_text_path = output_dir / "latest.txt"
     json_path = output_dir / f"{timestamp}_{scenario}.json"
@@ -56,6 +53,33 @@ def _save_result(result: object) -> Path | None:
     json_path.write_text(serialized, encoding="utf-8")
     latest_json_path.write_text(serialized, encoding="utf-8")
     return text_path
+
+
+def _save_result(result: object) -> Path | None:
+    timestamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    result_text = str(result)
+    scenario = os.getenv("SCENARIO", "smoke")
+    task_text = os.getenv("TASK_TEXT") or os.getenv("TOPIC")
+
+    try:
+        preferred = _resolve_output_dir()
+    except OSError:
+        return None
+
+    for candidate in (preferred, Path("/tmp/agent_mesh_outputs")):
+        try:
+            candidate.mkdir(parents=True, exist_ok=True)
+            return _write_result_files(
+                candidate,
+                timestamp=timestamp,
+                scenario=scenario,
+                result_text=result_text,
+                task_text=task_text,
+            )
+        except OSError:
+            continue
+
+    return None
 
 
 result = run_from_env()

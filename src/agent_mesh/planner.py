@@ -46,9 +46,17 @@ def _build_planner_prompt(
     available_tools: list[str],
     available_models: list[dict[str, Any]],
     effort_config: dict[str, Any],
+    force_generate: bool = False,
 ) -> list[dict[str, str]]:
     """Build the messages list for the planner LLM call."""
     effort_level = effort_config.get("levels", {}).get(effort, {})
+    generation_rule = ""
+    if force_generate:
+        generation_rule = (
+            "\n## Generation Mode\n"
+            "Start from scratch. Do not reuse or adapt an existing crew. "
+            "You must return decision=\"generate\".\n"
+        )
 
     user_content = f"""## Task
 {task_text}
@@ -59,6 +67,7 @@ Max swarm agents: {effort_level.get('max_swarm_agents', 4)}
 
 ## Existing Crews
 {chr(10).join(candidates) if candidates else 'No existing crews registered.'}
+{generation_rule}
 
 ## Available Tools
 {', '.join(available_tools)}
@@ -185,6 +194,7 @@ def plan_crew(
     available_tools: set[str],
     available_models: set[str],
     model_concurrency: dict[str, int],
+    force_generate: bool = False,
 ) -> PlannerResult:
     """Run the planner to decide crew selection/generation."""
     handbook = load_planner_handbook()
@@ -192,7 +202,7 @@ def plan_crew(
     catalogs = load_catalogs()
     effort_config = load_effort_config()
 
-    candidates_entries = registry.find_candidates(task_text, limit=5)
+    candidates_entries = [] if force_generate else registry.find_candidates(task_text, limit=5)
     candidates = [entry.summary_for_planner() for entry in candidates_entries]
 
     from .config_loader import load_models_config
@@ -219,6 +229,7 @@ def plan_crew(
         available_tools=sorted(available_tools),
         available_models=models_info,
         effort_config=effort_config,
+        force_generate=force_generate,
     )
 
     planner_llm = llms.get(PLANNER_MODEL_PROFILE)
@@ -251,6 +262,12 @@ def plan_crew(
     except Exception:
         logger.exception("Failed to parse planner response")
         raise
+
+    if force_generate and planner_response.decision != "generate":
+        raise ValueError(
+            f"Planner returned decision='{planner_response.decision}' "
+            "but force_generate was requested"
+        )
 
     if planner_response.decision == "reuse" and planner_response.reuse_crew:
         crew_config = load_crew_config(planner_response.reuse_crew)
