@@ -1,0 +1,8 @@
+# Multi-Agent Framework — Git Attributes
+#
+# Use merge=ours for state files that should not cause merge conflicts.
+# This prevents pipeline state from being overwritten during merges.
+#
+# TODO: Uncomment and adjust the path pattern for your project's state files.
+# Example: if your pipeline writes rolling state to state/*.json:
+# state/*.json merge=ours

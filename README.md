@@ -1,0 +1,167 @@
+# Supercrew
+
+A dynamic wrapper around [CrewAI](https://docs.crewai.com) that builds the right crew for your task automatically. Give it a plain-English task and it figures out which agents, tools, and models to use — or just name an existing crew for instant execution.
+
+## How it works
+
+```
+You: ./start.sh "find jazz festivals in Berlin summer 2026"
+
+Supercrew:
+  1. Sends your task to a cloud LLM (via LiteLLM)
+  2. LLM picks an existing crew or designs a new one
+  3. CrewAI agents execute the crew (search, analyze, synthesize)
+  4. Result is saved to outputs/
+```
+
+Three models work together through a single LiteLLM proxy:
+
+| Model | Size | Role |
+|-------|------|------|
+| `cloud-fast` | Cloud | Smartest. Plans crews, complex synthesis |
+| `local-clever` | 27B local | Analysis, auditing, reasoning |
+| `local-swarm` | 9B local | Parallel research workers (up to 16 concurrent). Vision. |
+
+## Quick start
+
+```bash
+# 1. Copy and fill in your environment
+cp .env.example .env
+# Edit .env with your LiteLLM proxy URL and API key
+
+# 2. Run with a task
+./start.sh "compare the top 3 project management tools for a small team"
+
+# Or use an existing crew directly (skips the planner)
+./start.sh --crew deep_research "music festivals in Barcelona 2026"
+
+# Control how much effort agents put in
+./start.sh --effort thorough "find all outdoor cinema events in Amsterdam"
+
+# Save a generated crew for reuse
+./start.sh --save event_scout "weekend events in Munich"
+
+# Read task from a file
+./start.sh --input input.md
+```
+
+## Effort levels
+
+| Level | Agents | Iterations | Time limit | Use when |
+|-------|--------|-----------|-----------|----------|
+| `quick` | 2-3 | 5 | 60s | Simple question, fast lookup |
+| `standard` | 3-4 | 15 | 3 min | Normal research (default) |
+| `thorough` | 4-6 | 25 | 5 min | Deep research, verification |
+| `exhaustive` | 5-8 | 40 | 10 min | Maximum coverage, multi-source |
+
+## Pre-built crews
+
+| Crew | Agents | What it does |
+|------|--------|-------------|
+| `research` | 3 | Web search + analysis + writing |
+| `deep_research` | 7 | Multi-source research with coverage audit and evidence normalization |
+| `deep_research_cloud_review` | 7 | Deep research with cloud-powered final review |
+| `parallel_research` | 5 | Parallel fact/pricing/risk branches merged by analyst |
+| `analysis` | 2 | Reasoning over provided material |
+| `synthesis` | 2 | Merge and polish scattered input |
+
+## Project structure
+
+```
+start.sh                     Entry point
+supercrew.py                 Python entry point (called by Docker)
+config/
+  models.yaml                LLM model profiles (swarm, clever, cloud_fast)
+  tools.yaml                 Tool definitions (search, web fetch, PDF)
+  effort.yaml                Effort level settings
+  model_policy.yaml          Model assignment guidelines for the planner
+  routing.yaml               Keyword-based routing fallback
+  crew_registry.yaml         Crew metadata index
+  planner_handbook.md        Rules for the planner LLM
+  crews/                     Hand-authored crew definitions (YAML)
+  generated_crews/           Planner-created crews (auto-saved)
+  catalogs/                  Building blocks (role archetypes, task patterns)
+  scenarios/                 Predefined run configurations
+src/agent_mesh/
+  runner.py                  Main dispatch logic
+  planner.py                 Dynamic crew planning via cloud LLM
+  crew_builder.py            Instantiate CrewAI Crew from config
+  agent_factory.py           Instantiate CrewAI Agents from config
+  crew_spec.py               Pydantic models for crew specifications
+  crew_renderer.py           Render crew specs to YAML
+  registry.py                Crew registry (load, match, track usage)
+  config_loader.py           YAML config loading
+  llm_registry.py            LLM profile management
+  tools.py                   Custom tools (SearXNG, Crawl4AI, PDF)
+  compat.py                  LiteLLM message sanitizer
+```
+
+## Requirements
+
+- Docker (the crew runs inside a container)
+- A LiteLLM proxy serving your models
+- SearXNG instance (for web search tool)
+- Crawl4AI instance (for web page fetching)
+
+## Environment variables
+
+Set these in `.env`:
+
+```bash
+# Required
+LITELLM_BASE_URL=http://your-litellm-proxy:4000/v1
+LITELLM_API_KEY=your-key
+
+# Required for search
+SEARXNG_BASE_URL=http://your-searxng:8080
+
+# Optional
+CRAWL4AI_BASE_URL=https://your-crawl4ai-instance
+EFFORT=standard              # Default effort level
+PLANNER_DISABLED=0           # Set to 1 to skip planner, use keyword routing
+```
+
+## Make targets
+
+```bash
+make build    # Build the Docker image
+make run      # Run with PROMPT variable
+make shell    # Open a shell with .env loaded
+make up       # Start services in background
+make down     # Stop services
+make logs     # Tail logs
+```
+
+## How the planner works
+
+When you run a task without specifying `--crew`, the planner:
+
+1. Extracts features from your task text
+2. Checks the crew registry for existing crews that match
+3. Calls `cloud-fast` with the task, candidate crews, and building-block catalogs
+4. The LLM decides: **reuse** an existing crew, **adapt** one, or **generate** new
+5. Generated crews are validated against strict rules before execution
+6. New crews are saved to `config/generated_crews/` for future reuse
+
+If the planner fails for any reason, the system falls back to keyword-based routing.
+
+## Crew lifecycle
+
+```
+Generated crew  -->  Use it a few times  -->  Promote to config/crews/
+                                               (./start.sh --promote name)
+```
+
+Generated crews accumulate usage stats in the registry. Promote the good ones
+to hand-authored status for long-term use.
+
+## Docs
+
+| Document | Purpose |
+|----------|---------|
+| `docs/specs/architecture.md` | Full architecture specification |
+| `docs/sprints/feature-sprints.md` | Sprint plans for implementation |
+| `docs/crewai/` | CrewAI framework reference docs |
+| `AGENTS.md` | Multi-agent framework conventions |
+| `CLAUDE.md` | Architect agent instructions |
+| `CODEX.md` | Coder agent instructions |
