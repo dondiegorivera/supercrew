@@ -11,8 +11,10 @@ services:
       - .env
     entrypoint: ["python", "supercrew.py"]
     environment:
-      HOME: "/home/appuser"
-      PYTHONPATH: "/home/appuser/.local/lib/python3.13/site-packages"
+      HOME: "/tmp/crewai-home"
+      XDG_DATA_HOME: "/tmp/crewai-home/.local/share"
+      XDG_CACHE_HOME: "/tmp/crewai-home/.cache"
+      XDG_CONFIG_HOME: "/tmp/crewai-home/.config"
       AGENT_MESH_LLM_DEBUG: "1"
       AGENT_MESH_LLM_DEBUG_DIR: "/workspace/logs/llm_debug"
       OUTPUT_DIR: "/workspace/outputs"
