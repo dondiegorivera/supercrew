@@ -37,13 +37,16 @@ def render_crew_dict(spec: CrewSpecPayload) -> dict[str, Any]:
             task_dict["async_execution"] = True
         tasks[task.name] = task_dict
 
-    return {
+    data = {
         "name": spec.name,
         "process": spec.process,
         "verbose": True,
         "agents": agents,
         "tasks": tasks,
     }
+    if spec.process == "hierarchical" and spec.manager_model:
+        data["manager_model"] = spec.manager_model
+    return data
 
 
 def render_crew_yaml(spec: CrewSpecPayload) -> str:

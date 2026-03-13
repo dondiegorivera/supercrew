@@ -165,7 +165,60 @@ def test_async_last_task_rejected():
         ],
     )
     errors = validate_crew_spec(spec, TOOLS, MODELS, CONCURRENCY)
-    assert any("cannot be async" in error for error in errors)
+    assert any("no downstream sync consumer" in error for error in errors)
+    assert not any("consecutive async tasks" in error for error in errors)
+
+
+def test_trailing_async_block_rejected():
+    spec = _minimal_spec(
+        tasks=[
+            TaskSpec(
+                name="search",
+                description="Search {topic}",
+                expected_output="Results",
+                agent="researcher",
+            ),
+            TaskSpec(
+                name="branch_a",
+                description="Collect branch A",
+                expected_output="A",
+                agent="researcher",
+                async_execution=True,
+            ),
+            TaskSpec(
+                name="branch_b",
+                description="Collect branch B",
+                expected_output="B",
+                agent="analyst",
+                async_execution=True,
+            ),
+        ],
+    )
+    errors = validate_crew_spec(spec, TOOLS, MODELS, CONCURRENCY)
+    assert any("consecutive async tasks" in error for error in errors)
+
+
+def test_single_trailing_async_allowed():
+    spec = _minimal_spec(
+        tasks=[
+            TaskSpec(
+                name="search",
+                description="Search {topic}",
+                expected_output="Results",
+                agent="researcher",
+            ),
+            TaskSpec(
+                name="final_async",
+                description="Finalize {topic}",
+                expected_output="Done",
+                agent="analyst",
+                async_execution=True,
+            ),
+        ],
+    )
+    errors = validate_crew_spec(spec, TOOLS, MODELS, CONCURRENCY)
+    assert any("no downstream sync consumer" in error for error in errors)
+    assert not any("consecutive async tasks" in error for error in errors)
 
 
 def test_async_without_sync_consumer():
@@ -188,6 +241,183 @@ def test_async_without_sync_consumer():
     )
     errors = validate_crew_spec(spec, TOOLS, MODELS, CONCURRENCY)
     assert any("no downstream sync consumer" in error for error in errors)
+
+
+def test_async_context_sequential_adjacent_rejected():
+    spec = _minimal_spec(
+        agents=[
+            AgentSpec(
+                name="researcher",
+                role_archetype="researcher",
+                role="Researcher",
+                goal="Find info",
+                backstory="Good at research",
+                model_profile="swarm",
+            ),
+            AgentSpec(
+                name="verifier",
+                role_archetype="auditor",
+                role="Verifier",
+                goal="Verify results",
+                backstory="Careful verifier",
+                model_profile="clever",
+            ),
+            AgentSpec(
+                name="writer",
+                role_archetype="writer",
+                role="Writer",
+                goal="Write output",
+                backstory="Good writer",
+                model_profile="clever",
+            ),
+        ],
+        tasks=[
+            TaskSpec(
+                name="search_a",
+                description="Search A for {topic}",
+                expected_output="A",
+                agent="researcher",
+                async_execution=True,
+            ),
+            TaskSpec(
+                name="verify_a",
+                description="Verify A",
+                expected_output="Verified",
+                agent="verifier",
+                context=["search_a"],
+                async_execution=True,
+            ),
+            TaskSpec(
+                name="write",
+                description="Write the results",
+                expected_output="Final",
+                agent="writer",
+                context=["verify_a"],
+            ),
+        ],
+    )
+    errors = validate_crew_spec(spec, TOOLS, MODELS, CONCURRENCY)
+    assert any("sequentially adjacent async task" in error for error in errors)
+
+
+def test_async_context_with_sync_separator_allowed():
+    spec = _minimal_spec(
+        agents=[
+            AgentSpec(
+                name="researcher",
+                role_archetype="researcher",
+                role="Researcher",
+                goal="Find info",
+                backstory="Good at research",
+                model_profile="swarm",
+            ),
+            AgentSpec(
+                name="verifier",
+                role_archetype="auditor",
+                role="Verifier",
+                goal="Verify results",
+                backstory="Careful verifier",
+                model_profile="clever",
+            ),
+            AgentSpec(
+                name="writer",
+                role_archetype="writer",
+                role="Writer",
+                goal="Write output",
+                backstory="Good writer",
+                model_profile="clever",
+            ),
+        ],
+        tasks=[
+            TaskSpec(
+                name="search_a",
+                description="Search A for {topic}",
+                expected_output="A",
+                agent="researcher",
+                async_execution=True,
+            ),
+            TaskSpec(
+                name="merge_a",
+                description="Merge A",
+                expected_output="Merged",
+                agent="verifier",
+                context=["search_a"],
+            ),
+            TaskSpec(
+                name="reuse_a",
+                description="Reuse A",
+                expected_output="Reused",
+                agent="writer",
+                context=["search_a"],
+                async_execution=True,
+            ),
+            TaskSpec(
+                name="publish",
+                description="Publish the result",
+                expected_output="Published",
+                agent="verifier",
+                context=["reuse_a"],
+            ),
+        ],
+    )
+    errors = validate_crew_spec(spec, TOOLS, MODELS, CONCURRENCY)
+    assert errors == [], f"Unexpected errors: {errors}"
+
+
+def test_context_references_future_task_rejected():
+    spec = _minimal_spec(
+        tasks=[
+            TaskSpec(
+                name="search",
+                description="Search {topic}",
+                expected_output="Results",
+                agent="researcher",
+                context=["analyze"],
+            ),
+            TaskSpec(
+                name="analyze",
+                description="Analyze results",
+                expected_output="Analysis",
+                agent="analyst",
+            ),
+        ],
+    )
+    errors = validate_crew_spec(spec, TOOLS, MODELS, CONCURRENCY)
+    assert any("references future task" in error for error in errors)
+
+
+def test_context_references_earlier_task_allowed():
+    spec = _minimal_spec(
+        tasks=[
+            TaskSpec(
+                name="search",
+                description="Search {topic}",
+                expected_output="Results",
+                agent="researcher",
+            ),
+            TaskSpec(
+                name="analyze",
+                description="Analyze results",
+                expected_output="Analysis",
+                agent="analyst",
+                context=["search"],
+            ),
+        ],
+    )
+    errors = validate_crew_spec(spec, TOOLS, MODELS, CONCURRENCY)
+    assert errors == [], f"Unexpected errors: {errors}"
+
+
+def test_hierarchical_without_manager_rejected():
+    spec = _minimal_spec(process="hierarchical")
+    errors = validate_crew_spec(spec, TOOLS, MODELS, CONCURRENCY)
+    assert any("requires 'manager_model'" in error for error in errors)
+
+
+def test_hierarchical_with_manager_passes():
+    spec = _minimal_spec(process="hierarchical", manager_model="cloud_fast")
+    errors = validate_crew_spec(spec, TOOLS, MODELS, CONCURRENCY)
+    assert errors == [], f"Unexpected errors: {errors}"
 
 
 def test_concurrency_exceeded():

@@ -353,6 +353,7 @@ def _crew_config_to_payload(
         name=name,
         description=description,
         process=config.get("process", "sequential"),
+        manager_model=config.get("manager_model"),
         tags=tags,
         query_archetypes=query_archetypes,
         agents=[
@@ -373,6 +374,10 @@ def _merge_adapted_crew_config(
     merged = copy.deepcopy(base_config)
     merged["name"] = spec.name
     merged["process"] = spec.process
+    if spec.manager_model:
+        merged["manager_model"] = spec.manager_model
+    elif spec.process != "hierarchical":
+        merged.pop("manager_model", None)
     merged["verbose"] = base_config.get("verbose", True)
     merged.setdefault("agents", {})
     merged.setdefault("tasks", {})
