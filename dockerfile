@@ -1,7 +1,7 @@
 FROM sageil/crewai:1.10.0
 
 USER root
-RUN python -m pip install --no-cache-dir litellm requests pypdf
+RUN python -m pip install --no-cache-dir crewai litellm requests pypdf
 
 WORKDIR /workspace
 
