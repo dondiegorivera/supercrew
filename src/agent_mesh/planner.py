@@ -147,6 +147,16 @@ def _normalize_planner_payload(parsed: dict[str, Any], task_text: str) -> dict[s
 
 def _repair_async_task_graph(spec: CrewSpecPayload) -> CrewSpecPayload:
     tasks = [task.model_copy(deep=True) for task in spec.tasks]
+
+    # CrewAI rejects async tasks that consume async context. Convert them to
+    # sync merge/verification steps before applying downstream fan-in repair.
+    async_task_names = {task.name for task in tasks if task.async_execution}
+    for task in tasks:
+        if not task.async_execution:
+            continue
+        if any(context_name in async_task_names for context_name in task.context):
+            task.async_execution = False
+
     sync_consumers_by_async: dict[str, bool] = {
         task.name: False for task in tasks if task.async_execution
     }

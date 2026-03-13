@@ -132,6 +132,16 @@ def validate_crew_spec(
             errors.append(f"Last task '{last_task.name}' cannot be async")
 
     async_task_names = {task.name for task in spec.tasks if task.async_execution}
+    for task in spec.tasks:
+        if not task.async_execution:
+            continue
+        async_context = [ctx for ctx in task.context if ctx in async_task_names]
+        if async_context:
+            errors.append(
+                f"Async task '{task.name}' cannot depend on async tasks: "
+                f"{', '.join(async_context)}"
+            )
+
     consumed_by_sync: set[str] = set()
     for task in spec.tasks:
         if not task.async_execution:

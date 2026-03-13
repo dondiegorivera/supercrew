@@ -374,6 +374,108 @@ def test_generate_payload_repairs_agent_limit():
     assert len(result.spec.tasks[-1].context) == 8
 
 
+def test_generate_payload_converts_async_task_with_async_context_to_sync():
+    registry = CrewRegistry()
+    registry.load()
+
+    payload = json.dumps(
+        {
+            "decision": "generate",
+            "crew_spec": {
+                "name": "hungary_music_festival_verifier",
+                "description": "Festival verification crew",
+                "process": "sequential",
+                "tags": ["music", "festival"],
+                "query_archetypes": ["find festivals in {topic}"],
+                "agents": [
+                    {
+                        "name": "major_finder",
+                        "role_archetype": "researcher",
+                        "role": "Major Finder",
+                        "goal": "Find major festivals",
+                        "backstory": "",
+                        "model_profile": "swarm",
+                        "tools": ["searxng_search"],
+                    },
+                    {
+                        "name": "minor_finder",
+                        "role_archetype": "researcher",
+                        "role": "Minor Finder",
+                        "goal": "Find minor festivals",
+                        "backstory": "",
+                        "model_profile": "swarm",
+                        "tools": ["searxng_search"],
+                    },
+                    {
+                        "name": "festival_verifier",
+                        "role_archetype": "auditor",
+                        "role": "Festival Verifier",
+                        "goal": "Verify dates, ticket prices, and major bands",
+                        "backstory": "",
+                        "model_profile": "clever",
+                        "tools": ["webpage_fetch"],
+                    },
+                    {
+                        "name": "festival_writer",
+                        "role_archetype": "writer",
+                        "role": "Festival Writer",
+                        "goal": "Produce the final answer",
+                        "backstory": "",
+                        "model_profile": "clever",
+                        "tools": [],
+                    },
+                ],
+                "tasks": [
+                    {
+                        "name": "search_major_festivals",
+                        "description": "Find major music festivals in {topic}",
+                        "expected_output": "Major festival candidates",
+                        "agent": "major_finder",
+                        "async_execution": True,
+                    },
+                    {
+                        "name": "search_minor_festivals",
+                        "description": "Find minor music festivals in {topic}",
+                        "expected_output": "Minor festival candidates",
+                        "agent": "minor_finder",
+                        "async_execution": True,
+                    },
+                    {
+                        "name": "verify_festival_details",
+                        "description": "Verify dates, ticket prices, and major bands from official sources",
+                        "expected_output": "A verified festival list",
+                        "agent": "festival_verifier",
+                        "context": ["search_major_festivals", "search_minor_festivals"],
+                        "async_execution": True,
+                    },
+                    {
+                        "name": "write_festival_summary",
+                        "description": "Write the final festival summary",
+                        "expected_output": "A final table with date, location, ticket price, and major bands",
+                        "agent": "festival_writer",
+                        "context": ["verify_festival_details"],
+                    },
+                ],
+            },
+        }
+    )
+
+    result = plan_crew(
+        task_text="all music festivals in Hungary in 2026",
+        effort="exhaustive",
+        llms=_FakeLLMs(payload),
+        registry=registry,
+        available_tools={"searxng_search", "webpage_fetch", "pdf_fetch", "pdf_extract"},
+        available_models={"swarm", "clever", "cloud_fast"},
+        model_concurrency={"swarm": 16, "clever": 2, "cloud_fast": 4},
+        force_generate=True,
+    )
+
+    assert result.spec is not None
+    verify_task = next(task for task in result.spec.tasks if task.name == "verify_festival_details")
+    assert verify_task.async_execution is False
+
+
 if __name__ == "__main__":
     import pytest
 
