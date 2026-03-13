@@ -2,10 +2,9 @@ name: generated_crew
 process: sequential
 verbose: true
 agents:
-  troedelmarkt_searcher:
-    role: researcher
-    goal: "Search web for tr\xF6delmarkt events in Kreis Steinfurt during April-May\
-      \ 2026"
+  major_festival_researcher:
+    role: Search for major music festivals in Hungary 2026
+    goal: Identify all major music festivals with 10000+ attendees
     backstory: ''
     model_profile: swarm
     tools:
@@ -13,9 +12,39 @@ agents:
     - webpage_fetch
     allow_delegation: false
     verbose: true
-  troedelmarkt_verifier:
-    role: deep_researcher
-    goal: Verify flea market dates from official sources and PDFs
+  medium_festival_researcher:
+    role: Search for medium music festivals in Hungary 2026
+    goal: Identify all medium music festivals with 1000-10000 attendees
+    backstory: ''
+    model_profile: swarm
+    tools:
+    - searxng_search
+    - webpage_fetch
+    allow_delegation: false
+    verbose: true
+  minor_festival_researcher:
+    role: Search for minor music festivals in Hungary 2026
+    goal: Identify all minor music festivals with under 1000 attendees
+    backstory: ''
+    model_profile: swarm
+    tools:
+    - searxng_search
+    - webpage_fetch
+    allow_delegation: false
+    verbose: true
+  regional_festival_researcher:
+    role: Search festivals by Hungarian regions and cities
+    goal: Ensure geographic coverage across all Hungarian regions
+    backstory: ''
+    model_profile: swarm
+    tools:
+    - searxng_search
+    - webpage_fetch
+    allow_delegation: false
+    verbose: true
+  detail_verification_agent:
+    role: Verify dates, prices, and lineups from official sources
+    goal: Extract accurate details from official festival websites and PDFs
     backstory: ''
     model_profile: swarm
     tools:
@@ -25,43 +54,68 @@ agents:
     - pdf_extract
     allow_delegation: false
     verbose: true
-  troedelmarkt_analyst:
-    role: analyst
-    goal: Synthesize and structure verified flea market data
+  coverage_auditor:
+    role: Audit completeness and find missing festivals
+    goal: Check for gaps in coverage and validate all festivals are captured
     backstory: ''
     model_profile: clever
-    tools: []
+    tools:
+    - searxng_search
+    - webpage_fetch
     allow_delegation: false
     verbose: true
-  troedelmarkt_writer:
-    role: writer
-    goal: Format final output with date, city, and city size
+  synthesis_agent:
+    role: Produce final structured festival list
+    goal: Merge all findings into comprehensive formatted output
     backstory: ''
-    model_profile: clever
+    model_profile: cloud_fast
     tools: []
     allow_delegation: false
     verbose: true
 tasks:
-  search_flea_markets:
-    description: "Search the web for tr\xF6delmarkt events in Kreis Steinfurt for\
-      \ {topic}"
-    expected_output: List of potential flea market events with dates and locations
-    agent: troedelmarkt_searcher
+  search_major_festivals:
+    description: Search the web for major music festivals in Hungary 2026 with {topic}
+    expected_output: A concise, structured result.
+    agent: major_festival_researcher
     async_execution: true
-  verify_official_sources:
-    description: Verify flea market dates from official city websites and PDF announcements
-    expected_output: Verified list of confirmed flea market events with sources
-    agent: troedelmarkt_verifier
+  search_medium_festivals:
+    description: Search the web for medium music festivals in Hungary 2026 with {topic}
+    expected_output: A concise, structured result.
+    agent: medium_festival_researcher
     async_execution: true
-  synthesize_findings:
-    description: Merge search results and verified sources into structured data table
-    expected_output: Structured table with date, city, and city size for each event
-    agent: troedelmarkt_analyst
+  search_minor_festivals:
+    description: Search the web for minor music festivals in Hungary 2026 with {topic}
+    expected_output: A concise, structured result.
+    agent: minor_festival_researcher
+    async_execution: true
+  search_regional_festivals:
+    description: Search for music festivals by Hungarian regions and cities for {topic}
+    expected_output: A concise, structured result.
+    agent: regional_festival_researcher
+    async_execution: true
+  verify_festival_details:
+    description: Verify dates, ticket prices, and major bands from official sources
+    expected_output: A concise, structured result.
+    agent: detail_verification_agent
     context:
-    - search_flea_markets
-    - verify_official_sources
-  format_final_output:
-    description: Polish the final list for readability and completeness
-    expected_output: "Final formatted list of tr\xF6delmarkts with date, city, city\
-      \ size"
-    agent: troedelmarkt_writer
+    - search_major_festivals
+    - search_medium_festivals
+    - search_minor_festivals
+    - search_regional_festivals
+    async_execution: true
+  audit_coverage:
+    description: Check for missing festivals and validate coverage completeness
+    expected_output: A concise, structured result.
+    agent: coverage_auditor
+    context:
+    - verify_festival_details
+    - search_major_festivals
+    - search_medium_festivals
+    - search_minor_festivals
+    - search_regional_festivals
+  synthesize_final_output:
+    description: Produce final structured list of all Hungarian music festivals 2026
+    expected_output: A concise, structured result.
+    agent: synthesis_agent
+    context:
+    - audit_coverage

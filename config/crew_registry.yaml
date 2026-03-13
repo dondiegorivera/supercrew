@@ -162,8 +162,9 @@ crews:
     base_crew: null
   generated_crew:
     source: generated
-    description: "Research and compile tr\xF6delmarkt (flea market) events in Kreis\
-      \ Steinfurt for April and May 2026, including dates, cities, and city sizes"
+    description: Comprehensive research crew to find all major, medium, and minor
+      music festivals in Hungary for 2026, including dates, locations, ticket prices,
+      and major bands
     tags: []
     query_archetypes: []
     required_tools:
@@ -172,14 +173,14 @@ crews:
     - searxng_search
     - webpage_fetch
     required_capabilities: []
-    agent_count: 4
+    agent_count: 7
     process: sequential
-    use_count: 1
-    success_count: 1
+    use_count: 0
+    success_count: 0
     failure_count: 0
     human_reviewed: false
     created_at: '2026-03-13'
-    last_used_at: '2026-03-13'
+    last_used_at: null
     supersedes: null
     superseded_by: null
     base_crew: null
