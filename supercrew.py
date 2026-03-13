@@ -19,6 +19,17 @@ for env_var, default in [
     path = Path(os.environ.get(env_var, default))
     path.mkdir(parents=True, exist_ok=True)
 
+if not os.environ.get("OPENAI_API_KEY"):
+    litellm_api_key = os.environ.get("LITELLM_API_KEY")
+    if litellm_api_key:
+        os.environ["OPENAI_API_KEY"] = litellm_api_key
+
+if not os.environ.get("OPENAI_BASE_URL"):
+    litellm_base_url = os.environ.get("LITELLM_BASE_URL")
+    if litellm_base_url:
+        os.environ["OPENAI_BASE_URL"] = litellm_base_url
+        os.environ.setdefault("OPENAI_API_BASE", litellm_base_url)
+
 from agent_mesh.runner import run_from_env
 
 
