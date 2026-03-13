@@ -21,7 +21,35 @@ decide whether to reuse an existing crew, adapt one, or generate a new one.
 - Tools: only use tools from the available tools list.
 - Models: only use model profiles from the available models list.
 - Context: use task context to pass upstream output. No cycles.
-- Async: async tasks must have a downstream sync consumer. Last task cannot be async.
+
+## Async Execution Rules (CrewAI constraints — must follow exactly)
+
+1. The task list is ordered. Context can only reference tasks that appear
+   earlier in the list.
+2. An async task cannot list another async task in its context if they are
+   adjacent with no sync task between them.
+3. The crew can end with at most one async task. If the last 2 or more tasks
+   are all async, CrewAI will reject the crew.
+4. Every async task should have a downstream sync task that lists it in
+   context.
+5. In sequential process, every task must have an agent assigned.
+
+Correct async fan-out pattern:
+  task_a (async, agent=swarm_1)
+  task_b (async, agent=swarm_2)
+  task_c (sync, agent=analyst, context=[task_a, task_b])
+
+Wrong patterns:
+  task_a (async) -> task_b (async, context=[task_a])
+  task_a (async) -> task_b (async)
+  task_a (sync) -> task_b (sync, context=[task_a, task_c]) where task_c is later
+
+## Hierarchical Process
+
+- Only use when more than 5 agents need delegation.
+- Must include `manager_model` set to a valid model profile.
+- Manager model should be the most capable available, typically `cloud_fast`.
+- Do not include the manager as an agent in the agents list.
 
 ## Model Assignment
 

@@ -181,6 +181,11 @@ Max swarm agents: {effort_level.get('max_swarm_agents', 4)}
 ## Model Assignment Policy
 {model_policy}
 
+## Required Field Names (use EXACTLY these)
+Agent fields: name, role_archetype, role, goal, backstory, model_profile, tools, allow_delegation
+Task fields: name, description, expected_output, agent, context, async_execution
+Crew fields: name, description, process, manager_model, tags, query_archetypes, agents, tasks
+
 ## Response Schema
 Return JSON matching this schema exactly:
 {{
