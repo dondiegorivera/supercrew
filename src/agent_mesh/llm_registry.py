@@ -14,11 +14,22 @@ class LLMRegistry:
 
     def _resolve_base_url(self) -> str:
         env_name = self._defaults.get("litellm_base_url_env", "LITELLM_BASE_URL")
-        return os.getenv(env_name, self._defaults.get("litellm_base_url", "http://100.80.49.81:4000/v1"))
+        env_value = os.getenv(env_name)
+        if env_value and env_value.strip():
+            return env_value.strip()
+        return self._defaults.get("litellm_base_url", "http://100.80.49.81:4000/v1")
 
     def _resolve_api_key(self) -> str:
         env_name = self._defaults.get("litellm_api_key_env", "LITELLM_API_KEY")
-        return os.getenv(env_name, self._defaults.get("litellm_api_key", "replace_me"))
+        env_value = os.getenv(env_name)
+        if env_value and env_value.strip():
+            return env_value.strip()
+
+        default_value = str(self._defaults.get("litellm_api_key", "")).strip()
+        if default_value:
+            return default_value
+
+        return "litellm-placeholder"
 
     def get(self, profile_name: str) -> LLM:
         if profile_name in self._cache:
