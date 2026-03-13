@@ -187,6 +187,110 @@ def test_generate_payload_normalizes_aliases_and_ascii_names():
     assert "search_trodelmarkts" in result.crew_config["tasks"]
 
 
+def test_generate_payload_repairs_unconsumed_async_tasks():
+    registry = CrewRegistry()
+    registry.load()
+
+    payload = json.dumps(
+        {
+            "decision": "generate",
+            "crew_spec": {
+                "name": "hungary_music_festivals",
+                "description": "Festival research crew",
+                "process": "sequential",
+                "tags": ["music", "festival"],
+                "query_archetypes": ["find festivals in {topic}"],
+                "agents": [
+                    {
+                        "name": "major_finder",
+                        "role_archetype": "researcher",
+                        "role": "Major Finder",
+                        "goal": "Find major festivals",
+                        "backstory": "",
+                        "model_profile": "swarm",
+                        "tools": ["searxng_search"],
+                    },
+                    {
+                        "name": "medium_finder",
+                        "role_archetype": "researcher",
+                        "role": "Medium Finder",
+                        "goal": "Find medium festivals",
+                        "backstory": "",
+                        "model_profile": "swarm",
+                        "tools": ["searxng_search"],
+                    },
+                    {
+                        "name": "minor_finder",
+                        "role_archetype": "researcher",
+                        "role": "Minor Finder",
+                        "goal": "Find minor festivals",
+                        "backstory": "",
+                        "model_profile": "swarm",
+                        "tools": ["searxng_search"],
+                    },
+                    {
+                        "name": "festival_writer",
+                        "role_archetype": "writer",
+                        "role": "Festival Writer",
+                        "goal": "Merge the research into a final answer",
+                        "backstory": "",
+                        "model_profile": "clever",
+                        "tools": [],
+                    },
+                ],
+                "tasks": [
+                    {
+                        "name": "search_major_festivals",
+                        "description": "Find major music festivals in {topic}",
+                        "expected_output": "Major festival candidates",
+                        "agent": "major_finder",
+                        "async_execution": True,
+                    },
+                    {
+                        "name": "search_medium_festivals",
+                        "description": "Find medium music festivals in {topic}",
+                        "expected_output": "Medium festival candidates",
+                        "agent": "medium_finder",
+                        "async_execution": True,
+                    },
+                    {
+                        "name": "search_minor_festivals",
+                        "description": "Find minor music festivals in {topic}",
+                        "expected_output": "Minor festival candidates",
+                        "agent": "minor_finder",
+                        "async_execution": True,
+                    },
+                    {
+                        "name": "merge_festival_results",
+                        "description": "Merge all findings into a final festival table",
+                        "expected_output": "A final table with date, location, ticket price, and major bands",
+                        "agent": "festival_writer",
+                    },
+                ],
+            },
+        }
+    )
+
+    result = plan_crew(
+        task_text="all music festivals in Hungary in 2026",
+        effort="exhaustive",
+        llms=_FakeLLMs(payload),
+        registry=registry,
+        available_tools={"searxng_search", "webpage_fetch", "pdf_fetch", "pdf_extract"},
+        available_models={"swarm", "clever", "cloud_fast"},
+        model_concurrency={"swarm": 16, "clever": 2, "cloud_fast": 4},
+        force_generate=True,
+    )
+
+    assert result.spec is not None
+    assert result.spec.tasks[-1].name == "merge_festival_results"
+    assert result.spec.tasks[-1].context == [
+        "search_major_festivals",
+        "search_medium_festivals",
+        "search_minor_festivals",
+    ]
+
+
 if __name__ == "__main__":
     import pytest
 

@@ -145,6 +145,40 @@ def _normalize_planner_payload(parsed: dict[str, Any], task_text: str) -> dict[s
     return normalized
 
 
+def _repair_async_task_graph(spec: CrewSpecPayload) -> CrewSpecPayload:
+    tasks = [task.model_copy(deep=True) for task in spec.tasks]
+    sync_consumers_by_async: dict[str, bool] = {
+        task.name: False for task in tasks if task.async_execution
+    }
+    if not sync_consumers_by_async:
+        return spec
+
+    for task in tasks:
+        if task.async_execution:
+            continue
+        for context_name in task.context:
+            if context_name in sync_consumers_by_async:
+                sync_consumers_by_async[context_name] = True
+
+    for index, task in enumerate(tasks):
+        if not task.async_execution or sync_consumers_by_async.get(task.name):
+            continue
+
+        target = next(
+            (candidate for candidate in tasks[index + 1 :] if not candidate.async_execution),
+            None,
+        )
+        if target is None:
+            target = next((candidate for candidate in reversed(tasks) if not candidate.async_execution), None)
+        if target is None:
+            continue
+        if task.name not in target.context:
+            target.context.append(task.name)
+        sync_consumers_by_async[task.name] = True
+
+    return spec.model_copy(update={"tasks": tasks})
+
+
 @dataclass
 class PlannerResult:
     decision: str
@@ -405,7 +439,7 @@ def plan_crew(
             f"but no crew_spec"
         )
 
-    spec = planner_response.crew_spec
+    spec = _repair_async_task_graph(planner_response.crew_spec)
     if planner_response.decision == "adapt" and planner_response.base_crew:
         base_config = load_crew_config(planner_response.base_crew)
         crew_config = _merge_adapted_crew_config(base_config, spec)
