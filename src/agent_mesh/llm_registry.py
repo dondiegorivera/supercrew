@@ -31,6 +31,12 @@ class LLMRegistry:
 
         return "litellm-placeholder"
 
+    @staticmethod
+    def _set_capability_overrides(llm: LLM, profile: dict[str, Any]) -> None:
+        supports_function_calling = profile.get("supports_function_calling")
+        if isinstance(supports_function_calling, bool):
+            llm.supports_function_calling = lambda: supports_function_calling
+
     def get(self, profile_name: str) -> LLM:
         if profile_name in self._cache:
             return self._cache[profile_name]
@@ -45,5 +51,6 @@ class LLMRegistry:
             api_key=self._resolve_api_key(),
             temperature=profile.get("temperature", 0.2),
         )
+        self._set_capability_overrides(llm, profile)
         self._cache[profile_name] = llm
         return llm

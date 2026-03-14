@@ -63,6 +63,11 @@ def _config() -> dict:
             "swarm": {
                 "provider_model": "openai/local-swarm",
                 "temperature": 0.2,
+            },
+            "cloud_fast": {
+                "provider_model": "openai/cloud-fast",
+                "temperature": 0.2,
+                "supports_function_calling": False,
             }
         },
     }
@@ -95,6 +100,17 @@ def test_explicit_env_values_win(monkeypatch):
 
     assert llm.kwargs["api_key"] == "real-key"
     assert llm.kwargs["base_url"] == "http://live-proxy:4000/v1"
+
+
+def test_profile_can_disable_function_calling(monkeypatch):
+    monkeypatch.delenv("LITELLM_API_KEY", raising=False)
+    monkeypatch.delenv("LITELLM_BASE_URL", raising=False)
+    registry = LLMRegistry(_config())
+
+    llm = registry.get("cloud_fast")
+
+    assert callable(llm.supports_function_calling)
+    assert llm.supports_function_calling() is False
 
 
 if __name__ == "__main__":

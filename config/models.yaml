@@ -33,6 +33,7 @@ models:
   cloud_fast:
     provider_model: openai/cloud-fast
     temperature: 0.2
+    supports_function_calling: false
     context_window: 32000
     max_concurrency: 4
     has_vision: false
