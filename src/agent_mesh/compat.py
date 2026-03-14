@@ -151,6 +151,12 @@ def _write_debug_record(record: dict[str, Any]) -> None:
 
 
 def patch_litellm_message_sanitizer() -> None:
+    """DEPRECATED: Use llm_wrapper.install_llm_resilience() instead.
+
+    This patches litellm.completion at the module level, which can be
+    bypassed if callers capture a reference at import time. The LLM.call
+    wrapper in llm_wrapper.py is the replacement.
+    """
     import litellm
 
     if getattr(litellm, "_agent_mesh_message_patch", False):

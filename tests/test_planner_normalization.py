@@ -167,6 +167,7 @@ def test_generate_payload_normalizes_aliases_and_ascii_names():
     result = plan_crew(
         task_text="kreis steinfurt flea markets in April and May 2026",
         effort="standard",
+        output_format="text",
         llms=_FakeLLMs(payload),
         registry=registry,
         available_tools={"searxng_search", "webpage_fetch", "pdf_fetch", "pdf_extract"},
@@ -274,6 +275,7 @@ def test_generate_payload_repairs_unconsumed_async_tasks():
     result = plan_crew(
         task_text="all music festivals in Hungary in 2026",
         effort="exhaustive",
+        output_format="text",
         llms=_FakeLLMs(payload),
         registry=registry,
         available_tools={"searxng_search", "webpage_fetch", "pdf_fetch", "pdf_extract"},
@@ -358,6 +360,7 @@ def test_generate_payload_repairs_agent_limit():
     result = plan_crew(
         task_text="all music festivals in Hungary in 2026",
         effort="exhaustive",
+        output_format="text",
         llms=_FakeLLMs(payload),
         registry=registry,
         available_tools={"searxng_search", "webpage_fetch", "pdf_fetch", "pdf_extract"},
@@ -463,6 +466,7 @@ def test_generate_payload_converts_async_task_with_async_context_to_sync():
     result = plan_crew(
         task_text="all music festivals in Hungary in 2026",
         effort="exhaustive",
+        output_format="text",
         llms=_FakeLLMs(payload),
         registry=registry,
         available_tools={"searxng_search", "webpage_fetch", "pdf_fetch", "pdf_extract"},
