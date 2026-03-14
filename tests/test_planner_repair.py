@@ -230,6 +230,15 @@ def test_broad_verify_task_gets_search_context_and_becomes_sync():
     assert verify_task["context"] == ["search_festivals"]
 
 
+def test_missing_topic_placeholder_is_added_to_first_task():
+    payload = _raw_payload()
+    payload["crew_spec"]["tasks"][0]["description"] = "Find festivals in Hungary"
+
+    repaired = repair_planner_output(payload)
+
+    assert repaired["crew_spec"]["tasks"][0]["description"].endswith("for {topic}")
+
+
 if __name__ == "__main__":
     import pytest
 

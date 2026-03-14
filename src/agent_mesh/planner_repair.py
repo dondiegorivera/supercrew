@@ -174,6 +174,24 @@ def _repair_broad_verify_tasks(spec: dict[str, Any]) -> dict[str, Any]:
     return spec
 
 
+def _ensure_topic_placeholder(spec: dict[str, Any]) -> dict[str, Any]:
+    tasks = [task for task in _listify(spec.get("tasks")) if isinstance(task, dict)]
+    if not tasks:
+        return spec
+
+    if any("{topic}" in str(task.get("description") or "") for task in tasks):
+        return spec
+
+    first_task = tasks[0]
+    description = str(first_task.get("description") or "").strip()
+    if description:
+        first_task["description"] = f"{description} for {{topic}}"
+    else:
+        first_task["description"] = "Complete the task for {topic}"
+    spec["tasks"] = tasks
+    return spec
+
+
 def repair_planner_output(raw: dict[str, Any], *, output_format: str = "auto") -> dict[str, Any]:
     """Apply normalization rules to raw parsed JSON from the planner LLM."""
     repaired = copy.deepcopy(raw)
@@ -276,6 +294,7 @@ def repair_planner_output(raw: dict[str, Any], *, output_format: str = "auto") -
     spec["agents"] = repaired_agents
     spec["tasks"] = repaired_tasks
     spec = _repair_broad_verify_tasks(spec)
+    spec = _ensure_topic_placeholder(spec)
     if output_format == "html":
         spec = _apply_html_output_hints(spec)
     repaired["crew_spec"] = spec
