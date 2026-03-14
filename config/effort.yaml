@@ -18,8 +18,7 @@ levels:
     max_retry_limit: 2
     planning: true
     planning_model: clever
-    reasoning: true
-    max_reasoning_attempts: 2
+    reasoning: false
     max_swarm_agents: 8
 
   exhaustive:
@@ -27,8 +26,7 @@ levels:
     max_retry_limit: 3
     planning: true
     planning_model: clever
-    reasoning: true
-    max_reasoning_attempts: 3
+    reasoning: false
     max_swarm_agents: 16
 
 defaults:
