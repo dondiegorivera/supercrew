@@ -192,6 +192,31 @@ def _ensure_topic_placeholder(spec: dict[str, Any]) -> dict[str, Any]:
     return spec
 
 
+def _repair_task_context_order(spec: dict[str, Any]) -> dict[str, Any]:
+    tasks = [task for task in _listify(spec.get("tasks")) if isinstance(task, dict)]
+    if not tasks:
+        return spec
+
+    seen_task_names: set[str] = set()
+    for task in tasks:
+        task_name = str(task.get("name") or "")
+        original_context = [str(item) for item in _listify(task.get("context"))]
+        repaired_context: list[str] = []
+        for ctx in original_context:
+            if ctx == task_name:
+                continue
+            if ctx not in seen_task_names:
+                continue
+            if ctx not in repaired_context:
+                repaired_context.append(ctx)
+        task["context"] = repaired_context
+        if task_name:
+            seen_task_names.add(task_name)
+
+    spec["tasks"] = tasks
+    return spec
+
+
 def repair_planner_output(raw: dict[str, Any], *, output_format: str = "auto") -> dict[str, Any]:
     """Apply normalization rules to raw parsed JSON from the planner LLM."""
     repaired = copy.deepcopy(raw)
@@ -295,6 +320,7 @@ def repair_planner_output(raw: dict[str, Any], *, output_format: str = "auto") -
     spec["tasks"] = repaired_tasks
     spec = _repair_broad_verify_tasks(spec)
     spec = _ensure_topic_placeholder(spec)
+    spec = _repair_task_context_order(spec)
     if output_format == "html":
         spec = _apply_html_output_hints(spec)
     repaired["crew_spec"] = spec

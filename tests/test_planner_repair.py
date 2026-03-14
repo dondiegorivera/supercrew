@@ -239,6 +239,79 @@ def test_missing_topic_placeholder_is_added_to_first_task():
     assert repaired["crew_spec"]["tasks"][0]["description"].endswith("for {topic}")
 
 
+def test_future_context_reference_is_removed():
+    payload = {
+        "decision": "generate",
+        "crew_spec": {
+            "name": "festival_crew",
+            "description": "festival_crew",
+            "tags": [],
+            "query_archetypes": [],
+            "agents": [
+                {
+                    "name": "researcher",
+                    "role": "Researcher",
+                    "goal": "Find festivals",
+                    "backstory": "Find festivals",
+                    "model_profile": "swarm",
+                    "tools": ["searxng_search"],
+                    "allow_delegation": False,
+                    "role_archetype": "researcher",
+                },
+                {
+                    "name": "analyst",
+                    "role": "Analyst",
+                    "goal": "Synthesize findings",
+                    "backstory": "Synthesize findings",
+                    "model_profile": "clever",
+                    "tools": [],
+                    "allow_delegation": False,
+                    "role_archetype": "analyst",
+                },
+                {
+                    "name": "verifier",
+                    "role": "Verifier",
+                    "goal": "Verify details",
+                    "backstory": "Verify details",
+                    "model_profile": "swarm",
+                    "tools": ["webpage_fetch"],
+                    "allow_delegation": False,
+                    "role_archetype": "deep_researcher",
+                },
+            ],
+            "tasks": [
+                {
+                    "name": "search_festivals",
+                    "description": "Search for all festivals for {topic}",
+                    "expected_output": "Festival candidates",
+                    "agent": "researcher",
+                },
+                {
+                    "name": "verify_festival_details",
+                    "description": "Verify official festival details",
+                    "expected_output": "Verified details",
+                    "agent": "verifier",
+                    "context": ["synthesize_findings", "search_festivals"],
+                },
+                {
+                    "name": "synthesize_findings",
+                    "description": "Synthesize findings for {topic}",
+                    "expected_output": "Structured summary",
+                    "agent": "analyst",
+                    "context": ["verify_festival_details"],
+                },
+            ],
+        },
+    }
+
+    repaired = repair_planner_output(payload)
+
+    verify_task = repaired["crew_spec"]["tasks"][1]
+    synthesize_task = repaired["crew_spec"]["tasks"][2]
+    assert verify_task["context"] == ["search_festivals"]
+    assert synthesize_task["context"] == ["verify_festival_details"]
+
+
 if __name__ == "__main__":
     import pytest
 
