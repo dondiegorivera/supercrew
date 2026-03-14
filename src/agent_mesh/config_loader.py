@@ -10,6 +10,9 @@ import yaml
 ROOT_DIR = Path(__file__).resolve().parents[2]
 CONFIG_DIR = ROOT_DIR / "config"
 DATA_DIR = ROOT_DIR / "data"
+EFFORT_ALIASES = {
+    "normal": "standard",
+}
 
 
 def load_yaml(path: Path) -> dict[str, Any]:
@@ -49,6 +52,29 @@ def load_routing_config() -> dict[str, Any]:
 
 def load_effort_config() -> dict[str, Any]:
     return load_yaml(config_path("effort.yaml"))
+
+
+def normalize_effort(
+    effort: str | None,
+    effort_config: dict[str, Any] | None = None,
+) -> str:
+    if effort_config is None:
+        effort_config = load_effort_config()
+
+    levels = effort_config.get("levels", {})
+    default_effort = str(effort_config.get("defaults", {}).get("effort", "standard"))
+    candidate = str(effort or "").strip().lower()
+    candidate = EFFORT_ALIASES.get(candidate, candidate)
+
+    if candidate in levels:
+        return candidate
+    if default_effort in levels:
+        return default_effort
+    if "standard" in levels:
+        return "standard"
+    if levels:
+        return next(iter(levels))
+    return "standard"
 
 
 def load_model_policy() -> str:

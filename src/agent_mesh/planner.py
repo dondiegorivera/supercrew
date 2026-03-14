@@ -13,6 +13,7 @@ from .config_loader import (
     load_crew_config,
     load_effort_config,
     load_model_policy,
+    normalize_effort,
     load_planner_handbook,
 )
 from .crew_renderer import render_crew_dict
@@ -146,6 +147,7 @@ def _build_planner_prompt(
     force_generate: bool = False,
 ) -> list[dict[str, str]]:
     """Build the messages list for the planner LLM call."""
+    effort = normalize_effort(effort, effort_config)
     effort_level = effort_config.get("levels", {}).get(effort, {})
     generation_rule = ""
     if force_generate:
@@ -308,6 +310,7 @@ def plan_crew(
     model_policy = load_model_policy()
     catalogs = load_catalogs()
     effort_config = load_effort_config()
+    effort = normalize_effort(effort, effort_config)
 
     candidates_entries = [] if force_generate else registry.find_candidates(task_text, limit=5)
     candidates = [entry.summary_for_planner() for entry in candidates_entries]

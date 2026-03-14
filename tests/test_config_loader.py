@@ -18,6 +18,7 @@ load_catalogs = MODULE.load_catalogs
 load_effort_config = MODULE.load_effort_config
 load_model_policy = MODULE.load_model_policy
 load_models_config = MODULE.load_models_config
+normalize_effort = MODULE.normalize_effort
 load_registry_config = MODULE.load_registry_config
 
 
@@ -66,6 +67,16 @@ def test_catalogs_load():
     assert "task_patterns" in catalogs
     assert "archetypes" in catalogs["role_archetypes"]
     assert "patterns" in catalogs["task_patterns"]
+
+
+def test_normalize_effort_accepts_normal_alias():
+    config = load_effort_config()
+    assert normalize_effort("normal", config) == "standard"
+
+
+def test_normalize_effort_unknown_falls_back_to_default():
+    config = load_effort_config()
+    assert normalize_effort("definitely-not-valid", config) == "standard"
 
 
 if __name__ == "__main__":

@@ -5,7 +5,7 @@ from typing import Any
 from crewai import Crew, Process, Task
 
 from .agent_factory import build_agents
-from .config_loader import load_effort_config
+from .config_loader import load_effort_config, normalize_effort
 from .llm_registry import LLMRegistry
 
 
@@ -47,7 +47,7 @@ def _resolve_effort_overrides(
     if effort_config is None:
         effort_config = load_effort_config()
     levels = effort_config.get("levels", {})
-    return levels.get(effort)
+    return levels.get(normalize_effort(effort, effort_config))
 
 
 def build_crew(
