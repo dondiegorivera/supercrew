@@ -88,15 +88,7 @@ def _resolve_call_timeout(llm: Any) -> float | None:
     return timeout
 
 
-def _install_call_wrapper() -> None:
-    """Wrap crewai.LLM.call() to sanitize messages and add resilience."""
-    from crewai import LLM
-
-    if getattr(LLM, "_agent_mesh_call_wrapper_installed", False):
-        return
-
-    original_call = LLM.call
-
+def _build_wrapped_call(original_call: Any) -> Any:
     def wrapped_call(
         self: Any,
         messages: str | list[dict[str, Any]],
@@ -185,8 +177,37 @@ def _install_call_wrapper() -> None:
         finally:
             _limiter.release(model_name)
 
-    LLM.call = wrapped_call
-    LLM._agent_mesh_call_wrapper_installed = True
+    return wrapped_call
+
+
+def _install_call_wrapper_on_class(target_class: type, marker_name: str) -> None:
+    """Wrap target_class.call() to sanitize messages and add resilience."""
+    if getattr(target_class, marker_name, False):
+        return
+
+    original_call = getattr(target_class, "call", None)
+    if not callable(original_call):
+        return
+
+    target_class.call = _build_wrapped_call(original_call)
+    setattr(target_class, marker_name, True)
+
+
+def _install_call_wrapper() -> None:
+    """Wrap CrewAI LLM entry points to sanitize messages and add resilience."""
+    from crewai import LLM
+
+    _install_call_wrapper_on_class(LLM, "_agent_mesh_call_wrapper_installed")
+
+    try:
+        from crewai.llms.providers.openai.completion import OpenAICompletion
+    except Exception:
+        return
+
+    _install_call_wrapper_on_class(
+        OpenAICompletion,
+        "_agent_mesh_openai_completion_wrapper_installed",
+    )
 
 
 def install_llm_resilience() -> None:

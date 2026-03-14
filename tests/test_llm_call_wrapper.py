@@ -36,6 +36,10 @@ def _load_llm_wrapper_with_fake_crewai(llm_class: type):
     crewai.LLM = llm_class
     sys.modules["crewai"] = crewai
 
+    provider_module = types.ModuleType("crewai.llms.providers.openai.completion")
+    provider_module.OpenAICompletion = llm_class
+    sys.modules["crewai.llms.providers.openai.completion"] = provider_module
+
     _load_agent_mesh_module(package_name, "compat")
     _load_agent_mesh_module(package_name, "timeout_utils")
     return _load_agent_mesh_module(package_name, "llm_wrapper")
@@ -159,3 +163,29 @@ def test_wrapper_handles_string_messages():
     llm.call("hello")
 
     assert llm.seen_messages == "hello"
+
+
+def test_wrapper_sanitizes_provider_openai_completion_path():
+    class FakeLLM:
+        def __init__(self, model="local-swarm", timeout=30):
+            self.model = model
+            self.timeout = timeout
+            self.seen_messages = None
+
+        def call(self, messages, **kwargs):
+            self.seen_messages = messages
+            return "ok"
+
+    module = _load_llm_wrapper_with_fake_crewai(FakeLLM)
+    module.install_llm_resilience()
+
+    provider_llm = sys.modules["crewai.llms.providers.openai.completion"].OpenAICompletion()
+    provider_llm.call(
+        [
+            {"role": "user", "content": "Find events"},
+            {"role": "system", "content": "Be precise"},
+        ]
+    )
+
+    assert provider_llm.seen_messages[0]["role"] == "system"
+    assert provider_llm.seen_messages[1]["role"] == "user"
