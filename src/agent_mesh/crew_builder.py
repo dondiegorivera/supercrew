@@ -15,6 +15,34 @@ PROCESS_MAP = {
 }
 
 
+def _format_runtime_diagnostics(
+    *,
+    effort: str,
+    effort_overrides: dict[str, Any] | None,
+    process_name: str,
+    agents: dict[str, Any],
+) -> str:
+    planning_enabled = bool(effort_overrides and effort_overrides.get("planning"))
+    agent_parts = []
+    for name, agent in agents.items():
+        model_name = str(getattr(getattr(agent, "llm", None), "model", "") or "?")
+        reasoning_enabled = bool(getattr(agent, "reasoning", False))
+        agent_parts.append(
+            f"{name}(model={model_name},reasoning={str(reasoning_enabled).lower()})"
+        )
+    agents_summary = ", ".join(agent_parts) if agent_parts else "none"
+    return (
+        f"[agent_mesh] effort={effort} planning={str(planning_enabled).lower()} "
+        f"process={process_name} agents={agents_summary}"
+    )
+
+
+def _has_unexpected_reasoning(effort: str, agents: dict[str, Any]) -> bool:
+    if effort not in {"quick", "standard"}:
+        return False
+    return any(bool(getattr(agent, "reasoning", False)) for agent in agents.values())
+
+
 def _build_tasks(config: dict[str, Any], agents: dict[str, Any]) -> list[Task]:
     tasks: list[Task] = []
     task_index: dict[str, Task] = {}
@@ -69,6 +97,20 @@ def build_crew(
     process_name = config.get("process", "sequential")
     if process_name not in PROCESS_MAP:
         raise ValueError(f"Unsupported process: {process_name}")
+
+    print(
+        _format_runtime_diagnostics(
+            effort=effort,
+            effort_overrides=effort_overrides,
+            process_name=process_name,
+            agents=agents,
+        )
+    )
+    if _has_unexpected_reasoning(effort, agents):
+        print(
+            f"[agent_mesh] warning: reasoning enabled during {effort} run; "
+            "check effort overrides and generated crew settings"
+        )
 
     crew_kwargs: dict[str, Any] = {
         "agents": list(agents.values()),
