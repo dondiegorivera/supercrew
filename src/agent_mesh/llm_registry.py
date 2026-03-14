@@ -31,6 +31,25 @@ class LLMRegistry:
 
         return "litellm-placeholder"
 
+    def _resolve_timeout(self, profile: dict[str, Any]) -> float | int | None:
+        profile_timeout = profile.get("timeout_seconds")
+        if profile_timeout is not None:
+            return profile_timeout
+
+        env_name = self._defaults.get("litellm_timeout_env", "LITELLM_TIMEOUT_SECONDS")
+        env_value = os.getenv(env_name)
+        if env_value and env_value.strip():
+            try:
+                return float(env_value.strip())
+            except ValueError:
+                pass
+
+        default_timeout = self._defaults.get("litellm_timeout_seconds")
+        if default_timeout is not None:
+            return default_timeout
+
+        return None
+
     @staticmethod
     def _set_capability_overrides(llm: LLM, profile: dict[str, Any]) -> None:
         supports_function_calling = profile.get("supports_function_calling")
@@ -49,6 +68,7 @@ class LLMRegistry:
             model=profile["provider_model"],
             base_url=self._resolve_base_url(),
             api_key=self._resolve_api_key(),
+            timeout=self._resolve_timeout(profile),
             temperature=profile.get("temperature", 0.2),
         )
         self._set_capability_overrides(llm, profile)

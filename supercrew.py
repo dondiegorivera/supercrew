@@ -53,6 +53,15 @@ def _normalize_output_format(value: str | None) -> str:
     return "auto"
 
 
+def _suppress_crewai_trace_prompts() -> None:
+    try:
+        from crewai.events.listeners.tracing.utils import set_suppress_tracing_messages
+
+        set_suppress_tracing_messages(True)
+    except Exception:
+        return
+
+
 def _unwrap_html_fence(result_text: str) -> str:
     stripped = result_text.strip()
     match = re.fullmatch(r"```(?:html)?\s*(.*?)\s*```", stripped, flags=re.IGNORECASE | re.DOTALL)
@@ -80,6 +89,12 @@ def _should_save_html(result_text: str, output_format: str) -> bool:
     return _looks_like_html(result_text)
 
 
+def _write_text_file(path: Path, content: str) -> None:
+    temp_path = path.with_name(f".{path.name}.tmp")
+    temp_path.write_text(content, encoding="utf-8")
+    temp_path.replace(path)
+
+
 def _write_result_files(
     output_dir: Path,
     *,
@@ -94,8 +109,8 @@ def _write_result_files(
     json_path = output_dir / f"{timestamp}_{scenario}.json"
     latest_json_path = output_dir / "latest.json"
 
-    text_path.write_text(result_text, encoding="utf-8")
-    latest_text_path.write_text(result_text, encoding="utf-8")
+    _write_text_file(text_path, result_text)
+    _write_text_file(latest_text_path, result_text)
 
     payload = {
         "timestamp": timestamp,
@@ -105,15 +120,15 @@ def _write_result_files(
         "output_format": "html" if _should_save_html(result_text, output_format) else "text",
     }
     serialized = json.dumps(payload, ensure_ascii=True, indent=2)
-    json_path.write_text(serialized, encoding="utf-8")
-    latest_json_path.write_text(serialized, encoding="utf-8")
+    _write_text_file(json_path, serialized)
+    _write_text_file(latest_json_path, serialized)
 
     if _should_save_html(result_text, output_format):
         html_text = _unwrap_html_fence(result_text)
         html_path = output_dir / f"{timestamp}_{scenario}.html"
         latest_html_path = output_dir / "latest.html"
-        html_path.write_text(html_text, encoding="utf-8")
-        latest_html_path.write_text(html_text, encoding="utf-8")
+        _write_text_file(html_path, html_text)
+        _write_text_file(latest_html_path, html_text)
         return html_path
 
     return text_path
@@ -127,30 +142,27 @@ def _save_result(result: object) -> Path | None:
     output_format = _normalize_output_format(os.getenv("OUTPUT_FORMAT"))
 
     try:
-        preferred = _resolve_output_dir()
+        output_dir = _resolve_output_dir()
     except OSError:
         return None
 
-    for candidate in (preferred, Path("/tmp/agent_mesh_outputs")):
-        try:
-            candidate.mkdir(parents=True, exist_ok=True)
-            return _write_result_files(
-                candidate,
-                timestamp=timestamp,
-                scenario=scenario,
-                result_text=result_text,
-                task_text=task_text,
-                output_format=output_format,
-            )
-        except OSError:
-            continue
-
-    return None
+    try:
+        return _write_result_files(
+            output_dir,
+            timestamp=timestamp,
+            scenario=scenario,
+            result_text=result_text,
+            task_text=task_text,
+            output_format=output_format,
+        )
+    except OSError:
+        return None
 
 
 def main() -> None:
     from agent_mesh.runner import run_from_env
 
+    _suppress_crewai_trace_prompts()
     result = run_from_env()
     saved_path = _save_result(result)
 

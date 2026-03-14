@@ -58,14 +58,17 @@ def _config() -> dict:
             "litellm_base_url": "http://example-proxy:4000/v1",
             "litellm_api_key_env": "LITELLM_API_KEY",
             "litellm_api_key": "replace_me",
+            "litellm_timeout_env": "LITELLM_TIMEOUT_SECONDS",
+            "litellm_timeout_seconds": 180,
         },
         "models": {
             "swarm": {
-                "provider_model": "openai/local-swarm",
+                "provider_model": "local-swarm",
                 "temperature": 0.2,
+                "supports_function_calling": False,
             },
             "cloud_fast": {
-                "provider_model": "openai/cloud-fast",
+                "provider_model": "cloud-fast",
                 "temperature": 0.2,
                 "supports_function_calling": False,
             }
@@ -102,7 +105,47 @@ def test_explicit_env_values_win(monkeypatch):
     assert llm.kwargs["base_url"] == "http://live-proxy:4000/v1"
 
 
+def test_timeout_defaults_from_config(monkeypatch):
+    monkeypatch.delenv("LITELLM_TIMEOUT_SECONDS", raising=False)
+    registry = LLMRegistry(_config())
+
+    llm = registry.get("swarm")
+
+    assert llm.kwargs["timeout"] == 180
+
+
+def test_timeout_env_overrides_default(monkeypatch):
+    monkeypatch.setenv("LITELLM_TIMEOUT_SECONDS", "45")
+    registry = LLMRegistry(_config())
+
+    llm = registry.get("swarm")
+
+    assert llm.kwargs["timeout"] == 45.0
+
+
+def test_profile_timeout_overrides_env(monkeypatch):
+    monkeypatch.setenv("LITELLM_TIMEOUT_SECONDS", "45")
+    config = _config()
+    config["models"]["swarm"]["timeout_seconds"] = 12
+    registry = LLMRegistry(config)
+
+    llm = registry.get("swarm")
+
+    assert llm.kwargs["timeout"] == 12
+
+
 def test_profile_can_disable_function_calling(monkeypatch):
+    monkeypatch.delenv("LITELLM_API_KEY", raising=False)
+    monkeypatch.delenv("LITELLM_BASE_URL", raising=False)
+    registry = LLMRegistry(_config())
+
+    llm = registry.get("swarm")
+
+    assert callable(llm.supports_function_calling)
+    assert llm.supports_function_calling() is False
+
+
+def test_cloud_profile_can_disable_function_calling(monkeypatch):
     monkeypatch.delenv("LITELLM_API_KEY", raising=False)
     monkeypatch.delenv("LITELLM_BASE_URL", raising=False)
     registry = LLMRegistry(_config())

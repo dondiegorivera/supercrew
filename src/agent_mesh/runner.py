@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import copy
 import logging
 import os
+import time
 from typing import Any
 
 from .compat import patch_litellm_message_sanitizer
@@ -20,12 +22,66 @@ from .tools import build_tool_registry
 
 logger = logging.getLogger(__name__)
 
+RETRYABLE_ERROR_NAMES = {
+    "APITimeoutError",
+    "ReadTimeout",
+    "Timeout",
+}
+
 
 def _merge_inputs(base: dict[str, Any], overrides: dict[str, Any] | None) -> dict[str, Any]:
     merged = dict(base)
     if overrides:
         merged.update({key: value for key, value in overrides.items() if value is not None})
     return merged
+
+
+def _resolve_timeout_retry_count() -> int:
+    raw_value = os.getenv("AGENT_MESH_TIMEOUT_RETRIES", "1").strip()
+    try:
+        return max(0, int(raw_value))
+    except ValueError:
+        return 1
+
+
+def _is_retryable_timeout(exc: BaseException) -> bool:
+    seen: set[int] = set()
+    current: BaseException | None = exc
+    while current is not None and id(current) not in seen:
+        seen.add(id(current))
+        if type(current).__name__ in RETRYABLE_ERROR_NAMES:
+            return True
+        if "timed out" in str(current).lower():
+            return True
+        current = current.__cause__ or current.__context__
+    return False
+
+
+def _resolve_timeout_fallback_model() -> str:
+    candidate = os.getenv("AGENT_MESH_TIMEOUT_FALLBACK_MODEL", "clever").strip()
+    return candidate or "clever"
+
+
+def _fallback_config_after_timeout(
+    crew_config: dict[str, Any],
+    *,
+    fallback_model: str,
+) -> tuple[dict[str, Any], bool]:
+    updated = copy.deepcopy(crew_config)
+    agents = updated.get("agents")
+    if not isinstance(agents, dict):
+        return updated, False
+
+    changed = False
+    for agent_spec in agents.values():
+        if not isinstance(agent_spec, dict):
+            continue
+        if str(agent_spec.get("model_profile") or "") != "swarm":
+            continue
+        agent_spec["model_profile"] = fallback_model
+        changed = True
+
+    return updated, changed
 
 
 def _resolve_template(task_text: str | None, scenario_name: str | None, explicit_template: str | None) -> str:
@@ -169,14 +225,44 @@ def run_task(
         registry = CrewRegistry()
         registry.load()
 
-    crew = build_crew(
-        config=crew_config,
-        llms=llms,
-        tools=tools,
-        effort=effort,
-    )
+    timeout_retries = _resolve_timeout_retry_count()
+    timeout_fallback_model = _resolve_timeout_fallback_model()
+    active_crew_config = crew_config
     try:
-        result = crew.kickoff(inputs=final_inputs)
+        last_exc: Exception | None = None
+        for attempt in range(timeout_retries + 1):
+            crew = build_crew(
+                config=active_crew_config,
+                llms=llms,
+                tools=tools,
+                effort=effort,
+            )
+            try:
+                result = crew.kickoff(inputs=final_inputs)
+                break
+            except Exception as exc:
+                last_exc = exc
+                if attempt >= timeout_retries or not _is_retryable_timeout(exc):
+                    raise
+                active_crew_config, changed_model_profiles = _fallback_config_after_timeout(
+                    active_crew_config,
+                    fallback_model=timeout_fallback_model,
+                )
+                delay_seconds = min(2 ** attempt, 8)
+                logger.warning(
+                    "Crew execution timed out; retrying",
+                    extra={
+                        "template_name": template_name,
+                        "attempt": attempt + 1,
+                        "max_attempts": timeout_retries + 1,
+                        "delay_seconds": delay_seconds,
+                        "fallback_model": timeout_fallback_model if changed_model_profiles else None,
+                    },
+                    exc_info=True,
+                )
+                time.sleep(delay_seconds)
+        else:
+            raise last_exc or RuntimeError("Crew execution failed without an exception.")
     except Exception:
         registry.record_usage(template_name, success=False)
         registry.save()
