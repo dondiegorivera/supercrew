@@ -60,7 +60,7 @@ cp .env.example .env
 |------|---------|
 | `--crew NAME` | Run a specific existing crew and skip planner selection |
 | `--effort LEVEL` | Override the effort profile for the run |
-| `--format TYPE` | Output artifact format: `auto`, `text`, or `html` |
+| `--format TYPE` | Output artifact format: `auto`, `text`, or `html`; `html` also nudges the planner toward a dedicated final HTML-writing step |
 | `--save NAME` | Save the planner-generated crew for later reuse |
 | `--input FILE` | Read task text from a file |
 | `--promote NAME` | Promote a generated crew into `config/crews/` |
@@ -194,6 +194,7 @@ If the result looks like HTML, or you explicitly set `--format html` / `OUTPUT_F
 - `outputs/latest.html`
 
 Timestamped per-run files follow the same behavior.
+When `html` is requested explicitly, the planner is also nudged to generate a final writer-oriented task that outputs standalone HTML.
 
 ## Crew lifecycle
 

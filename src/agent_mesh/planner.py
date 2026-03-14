@@ -137,6 +137,7 @@ class PlannerResult:
 def _build_planner_prompt(
     task_text: str,
     effort: str,
+    output_format: str,
     handbook: str,
     model_policy: str,
     catalogs: dict[str, Any],
@@ -157,6 +158,16 @@ def _build_planner_prompt(
             "You must return decision=\"generate\".\n"
         )
 
+    output_format_rule = ""
+    if output_format == "html":
+        output_format_rule = (
+            "\n## Output Format\n"
+            "The final deliverable must be a standalone valid HTML document suitable for saving "
+            "directly as an .html file.\n"
+            "Prefer a dedicated final presentation/writer agent using role_archetype=\"writer\".\n"
+            "The final task should explicitly produce HTML and its expected_output should say so.\n"
+        )
+
     user_content = f"""## Task
 {task_text}
 
@@ -167,6 +178,7 @@ Max swarm agents: {effort_level.get('max_swarm_agents', 4)}
 ## Existing Crews
 {chr(10).join(candidates) if candidates else 'No existing crews registered.'}
 {generation_rule}
+{output_format_rule}
 
 ## Available Tools
 {', '.join(available_tools)}
@@ -298,6 +310,7 @@ def _merge_adapted_crew_config(
 def plan_crew(
     task_text: str,
     effort: str,
+    output_format: str,
     llms: LLMRegistry,
     registry: CrewRegistry,
     available_tools: set[str],
@@ -332,6 +345,7 @@ def plan_crew(
     messages = _build_planner_prompt(
         task_text=task_text,
         effort=effort,
+        output_format=output_format,
         handbook=handbook,
         model_policy=model_policy,
         catalogs=catalogs,
@@ -369,7 +383,7 @@ def plan_crew(
 
         parsed = json.loads(cleaned)
         if isinstance(parsed, dict):
-            parsed = repair_planner_output(parsed)
+            parsed = repair_planner_output(parsed, output_format=output_format)
         planner_response = PlannerResponse(**parsed)
     except Exception:
         logger.exception("Failed to parse planner response")

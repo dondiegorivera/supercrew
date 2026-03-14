@@ -58,7 +58,63 @@ def _deduplicate_name(
     return f"{trimmed}{suffix}"
 
 
-def repair_planner_output(raw: dict[str, Any]) -> dict[str, Any]:
+def _apply_html_output_hints(spec: dict[str, Any]) -> dict[str, Any]:
+    tags = [str(tag) for tag in _listify(spec.get("tags"))]
+    if "html" not in tags:
+        tags.append("html")
+    spec["tags"] = tags
+
+    tasks = _listify(spec.get("tasks"))
+    agents = _listify(spec.get("agents"))
+    if not tasks or not agents:
+        return spec
+
+    final_task = tasks[-1]
+    if not isinstance(final_task, dict):
+        return spec
+
+    description = str(final_task.get("description") or "")
+    expected_output = str(final_task.get("expected_output") or "")
+    html_requirement = (
+        " Return only a standalone valid HTML document suitable for saving as an .html file."
+    )
+    if "standalone valid html" not in description.lower():
+        final_task["description"] = f"{description.rstrip()}{html_requirement}".strip()
+    if "html" not in expected_output.lower():
+        suffix = "Standalone valid HTML document."
+        final_task["expected_output"] = (
+            f"{expected_output.rstrip()} {suffix}".strip()
+            if expected_output
+            else suffix
+        )
+
+    final_agent_name = str(final_task.get("agent") or "")
+    for agent in agents:
+        if not isinstance(agent, dict):
+            continue
+        if str(agent.get("name") or "") != final_agent_name:
+            continue
+        if not _listify(agent.get("tools")):
+            agent["role_archetype"] = "writer"
+            agent["role"] = "HTML Content Writer"
+            goal = str(agent.get("goal") or "").strip()
+            backstory = str(agent.get("backstory") or "").strip()
+            html_goal = "Produce a polished standalone HTML deliverable."
+            html_backstory = (
+                "You turn verified material into clean, well-structured standalone HTML."
+            )
+            if "html" not in goal.lower():
+                agent["goal"] = f"{goal} {html_goal}".strip() if goal else html_goal
+            if "html" not in backstory.lower():
+                agent["backstory"] = (
+                    f"{backstory} {html_backstory}".strip() if backstory else html_backstory
+                )
+        break
+
+    return spec
+
+
+def repair_planner_output(raw: dict[str, Any], *, output_format: str = "auto") -> dict[str, Any]:
     """Apply normalization rules to raw parsed JSON from the planner LLM."""
     repaired = copy.deepcopy(raw)
     crew_spec = repaired.get("crew_spec")
@@ -159,5 +215,7 @@ def repair_planner_output(raw: dict[str, Any]) -> dict[str, Any]:
 
     spec["agents"] = repaired_agents
     spec["tasks"] = repaired_tasks
+    if output_format == "html":
+        spec = _apply_html_output_hints(spec)
     repaired["crew_spec"] = spec
     return repaired

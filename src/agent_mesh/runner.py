@@ -52,6 +52,7 @@ def run_task(
     crew_template: str | None = None,
     effort: str = "standard",
     save_name: str | None = None,
+    output_format: str | None = None,
     planner_disabled: bool = False,
     force_generate: bool = False,
 ) -> Any:
@@ -69,6 +70,8 @@ def run_task(
     final_inputs = _merge_inputs(scenario_inputs, inputs)
     if task_text:
         final_inputs["task_text"] = task_text
+    if output_format:
+        final_inputs["output_format"] = output_format
 
     # A CLI prompt should override scenario defaults unless TOPIC was set explicitly.
     if task_text and (not inputs or "topic" not in inputs):
@@ -102,6 +105,7 @@ def run_task(
             planner_result = plan_crew(
                 task_text=task_text,
                 effort=effort,
+                output_format=str(output_format or "auto"),
                 llms=llms,
                 registry=registry,
                 available_tools=available_tools,
@@ -190,6 +194,7 @@ def run_from_env() -> Any:
     topic = os.getenv("TOPIC")
     effort = os.getenv("EFFORT", "standard")
     save_name = os.getenv("CREW_SAVE_NAME")
+    output_format = os.getenv("OUTPUT_FORMAT")
     planner_disabled = os.getenv("PLANNER_DISABLED", "0") in ("1", "true", "yes")
     force_generate = os.getenv("FORCE_GENERATE", "0") in ("1", "true", "yes")
     input_file = os.getenv("INPUT_FILE")
@@ -215,6 +220,7 @@ def run_from_env() -> Any:
         crew_template=crew_template,
         effort=effort,
         save_name=save_name,
+        output_format=output_format,
         planner_disabled=planner_disabled,
         force_generate=force_generate,
     )

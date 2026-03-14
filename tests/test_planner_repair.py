@@ -154,6 +154,24 @@ def test_already_valid_input_unchanged():
     assert repaired == original
 
 
+def test_html_output_adds_final_html_hints():
+    payload = _raw_payload()
+    payload["crew_spec"]["agents"][0]["tools"] = []
+    payload["crew_spec"]["tasks"][0]["expected_output"] = "A polished deliverable"
+
+    repaired = repair_planner_output(payload, output_format="html")
+
+    agent = repaired["crew_spec"]["agents"][0]
+    task = repaired["crew_spec"]["tasks"][0]
+    assert "html" in repaired["crew_spec"]["tags"]
+    assert agent["role_archetype"] == "writer"
+    assert agent["role"] == "HTML Content Writer"
+    assert "html" in agent["goal"].lower()
+    assert "html" in agent["backstory"].lower()
+    assert "standalone valid html" in task["description"].lower()
+    assert "html" in task["expected_output"].lower()
+
+
 if __name__ == "__main__":
     import pytest
 
