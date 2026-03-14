@@ -81,4 +81,9 @@ def build_crew(
     if process_name == "hierarchical" and manager_model:
         crew_kwargs["manager_llm"] = llms.get(manager_model)
 
+    if effort_overrides and effort_overrides.get("planning"):
+        crew_kwargs["planning"] = True
+        planning_profile = effort_overrides.get("planning_model", "clever")
+        crew_kwargs["planning_llm"] = llms.get(planning_profile)
+
     return Crew(**crew_kwargs)

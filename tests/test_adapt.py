@@ -181,7 +181,7 @@ def test_adapt_research_with_added_auditor():
     assert len(built.kwargs["tasks"]) == 4
 
 
-def test_build_crew_disables_builtin_planning_even_for_high_effort():
+def test_build_crew_enables_planning_with_clever_for_high_effort():
     registry = CrewRegistry()
     registry.load()
 
@@ -211,8 +211,41 @@ def test_build_crew_disables_builtin_planning_even_for_high_effort():
     )
 
     assert built.kwargs["process"] == "sequential"
+    assert built.kwargs["planning"] is True
+    assert built.kwargs["planning_llm"] == "llm:clever"
+
+
+def test_build_crew_no_planning_for_low_effort():
+    registry = CrewRegistry()
+    registry.load()
+
+    payload = json.dumps(
+        {
+            "decision": "reuse",
+            "reuse_crew": "research",
+        }
+    )
+
+    result = plan_crew(
+        task_text="research jazz festivals",
+        effort="standard",
+        llms=_FakeLLMs(payload),
+        registry=registry,
+        available_tools={"searxng_search", "webpage_fetch", "pdf_fetch", "pdf_extract"},
+        available_models={"swarm", "clever", "cloud_fast"},
+        model_concurrency={"swarm": 16, "clever": 2, "cloud_fast": 4},
+    )
+
+    built = build_crew(
+        config=result.crew_config,
+        llms=_FakeLLMs(payload),
+        tools={"searxng_search": object()},
+        effort="standard",
+        effort_config=config_loader_module.load_effort_config(),
+    )
+
+    assert built.kwargs["process"] == "sequential"
     assert "planning" not in built.kwargs
-    assert "planning_llm" not in built.kwargs
 
 
 if __name__ == "__main__":
