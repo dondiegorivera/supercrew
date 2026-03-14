@@ -216,8 +216,10 @@ def _save_result(result: object) -> Path | None:
 
 
 def main() -> None:
+    from agent_mesh.llm_wrapper import install_llm_resilience
     from agent_mesh.runner import run_from_env
 
+    install_llm_resilience()
     _apply_crewai_capability_overrides()
     _suppress_crewai_trace_prompts()
     result = run_from_env()

@@ -19,7 +19,7 @@ levels:
     planning: true
     planning_model: clever
     reasoning: false
-    max_swarm_agents: 8
+    max_swarm_agents: 6
 
   exhaustive:
     max_iter: 40
@@ -27,7 +27,7 @@ levels:
     planning: true
     planning_model: clever
     reasoning: false
-    max_swarm_agents: 16
+    max_swarm_agents: 6
 
 defaults:
   effort: standard

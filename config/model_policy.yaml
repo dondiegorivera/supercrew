@@ -37,11 +37,11 @@ models:
 
   swarm:
     description: >
-      Local 9B model with vision. Small but fast. The key advantage is
-      massive parallelism: up to 16 concurrent agents. Also the only
-      model with vision capability.
+      Local 9B model with vision. Small but fast. Supports up to 6
+      concurrent agents, with 4 actively running and 2 queued. Also the
+      only model with vision capability.
     when_to_use:
-      - Parallel research branches (exploit 16-agent concurrency)
+      - Parallel research branches (up to 6 concurrent)
       - First-pass data gathering and extraction
       - Web search tasks
       - Image/screenshot/visual analysis (only model with vision)
@@ -50,10 +50,12 @@ models:
       - Complex reasoning or synthesis (too small)
       - Final answers (quality insufficient)
       - Tasks requiring deep analytical thinking
-    cost_note: "Free (local) — use liberally for parallel workers"
+      - More than 6 parallel branches (will queue and slow down)
+    cost_note: "Free (local) — use for parallel workers, but keep under 6 agents"
 
 assignment_rules:
-  - "Maximize swarm parallelism for research: create multiple async tasks on swarm"
+  - "Use swarm for parallel research: create up to max_swarm_agents async tasks"
+  - "Do NOT create more swarm agents than max_swarm_agents for the effort level"
   - "Use clever for merge/synthesis after swarm branches complete"
   - "Reserve cloud_fast for the planner call and high-value final synthesis"
   - "Never assign vision tasks to clever or cloud_fast — only swarm has vision"

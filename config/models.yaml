@@ -13,7 +13,9 @@ models:
     timeout_seconds: 300
     supports_function_calling: false
     context_window: 6144
-    max_concurrency: 16
+    max_concurrency: 6
+    client_concurrency: 4
+    fallback_model: clever
     has_vision: true
     strengths:
       - parallel_research
@@ -27,6 +29,8 @@ models:
     supports_function_calling: false
     context_window: 32768
     max_concurrency: 2
+    client_concurrency: 2
+    fallback_model: null
     has_vision: false
     strengths:
       - reasoning
@@ -41,6 +45,8 @@ models:
     supports_function_calling: false
     context_window: 32000
     max_concurrency: 4
+    client_concurrency: 4
+    fallback_model: null
     has_vision: false
     strengths:
       - planning

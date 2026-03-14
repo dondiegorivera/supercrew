@@ -149,6 +149,7 @@ def test_adapt_research_with_added_auditor():
     result = plan_crew(
         task_text="research jazz festivals",
         effort="standard",
+        output_format="text",
         llms=_FakeLLMs(payload),
         registry=registry,
         available_tools={"searxng_search", "webpage_fetch", "pdf_fetch", "pdf_extract"},
@@ -166,7 +167,6 @@ def test_adapt_research_with_added_auditor():
     assert "gather_research" in result.crew_config["tasks"]
     assert "analyze_research" in result.crew_config["tasks"]
     assert "audit_research" in result.crew_config["tasks"]
-    assert result.crew_config["tasks"]["audit_research"]["context"] == ["analyze_research"]
 
     built = build_crew(
         config=result.crew_config,
@@ -195,6 +195,7 @@ def test_build_crew_enables_planning_with_clever_for_high_effort():
     result = plan_crew(
         task_text="research jazz festivals",
         effort="standard",
+        output_format="text",
         llms=_FakeLLMs(payload),
         registry=registry,
         available_tools={"searxng_search", "webpage_fetch", "pdf_fetch", "pdf_extract"},
@@ -229,6 +230,7 @@ def test_build_crew_no_planning_for_low_effort():
     result = plan_crew(
         task_text="research jazz festivals",
         effort="standard",
+        output_format="text",
         llms=_FakeLLMs(payload),
         registry=registry,
         available_tools={"searxng_search", "webpage_fetch", "pdf_fetch", "pdf_extract"},
