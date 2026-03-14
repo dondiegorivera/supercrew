@@ -9,6 +9,7 @@ effort=""
 save_name=""
 input_file=""
 promote_name=""
+output_format=""
 force_generate="0"
 positional_args=()
 
@@ -25,6 +26,10 @@ while [[ $# -gt 0 ]]; do
       ;;
     --save)
       save_name="$2"
+      shift 2
+      ;;
+    --format)
+      output_format="$2"
       shift 2
       ;;
     --input)
@@ -90,6 +95,7 @@ docker compose run --rm --build \
   -e TOPIC="${TOPIC:-}" \
   -e EFFORT="${effort:-${EFFORT:-standard}}" \
   -e CREW_SAVE_NAME="${save_name:-${CREW_SAVE_NAME:-}}" \
+  -e OUTPUT_FORMAT="${output_format:-${OUTPUT_FORMAT:-}}" \
   -e INPUT_FILE="${input_file:-${INPUT_FILE:-}}" \
   -e PLANNER_DISABLED="${PLANNER_DISABLED:-0}" \
   -e FORCE_GENERATE="${force_generate:-${FORCE_GENERATE:-0}}" \

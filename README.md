@@ -41,6 +41,9 @@ cp .env.example .env
 # Force a brand-new generated crew
 ./start.sh --new --effort standard "find trödelmärkte in Kreis Steinfurt in April and May 2026"
 
+# Force HTML artifact saving
+./start.sh --format html "create a standalone HTML landing page for a Berlin jazz guide"
+
 # Save a generated crew for reuse
 ./start.sh --save event_scout "weekend events in Munich"
 
@@ -57,6 +60,7 @@ cp .env.example .env
 |------|---------|
 | `--crew NAME` | Run a specific existing crew and skip planner selection |
 | `--effort LEVEL` | Override the effort profile for the run |
+| `--format TYPE` | Output artifact format: `auto`, `text`, or `html` |
 | `--save NAME` | Save the planner-generated crew for later reuse |
 | `--input FILE` | Read task text from a file |
 | `--promote NAME` | Promote a generated crew into `config/crews/` |
@@ -64,12 +68,12 @@ cp .env.example .env
 
 ## Effort levels
 
-| Level | Agents | Iterations | Time limit | Use when |
-|-------|--------|-----------|-----------|----------|
-| `quick` | 2-3 | 5 | 60s | Simple question, fast lookup |
-| `standard` | 3-4 | 15 | 3 min | Normal research (default) |
-| `thorough` | 4-6 | 25 | 5 min | Deep research, verification |
-| `exhaustive` | 5-8 | 40 | 10 min | Maximum coverage, multi-source |
+| Level | Agents | Iterations | Use when |
+|-------|--------|-----------|----------|
+| `quick` | 2-3 | 5 | Simple question, fast lookup |
+| `standard` | 3-4 | 15 | Normal research (default) |
+| `thorough` | 4-6 | 25 | Deep research, verification |
+| `exhaustive` | 5-8 | 40 | Maximum coverage, multi-source |
 
 ## Pre-built crews
 
@@ -137,13 +141,14 @@ CRAWL4AI_BASE_URL=https://your-crawl4ai-instance
 EFFORT=standard              # Default effort level
 PLANNER_DISABLED=0           # Set to 1 to skip planner, use keyword routing
 FORCE_GENERATE=0             # Set to 1 to force planner generation from scratch
+OUTPUT_FORMAT=auto           # auto | text | html
 ```
 
 ## Make targets
 
 ```bash
 make build    # Build the Docker image
-make run      # Run with PROMPT plus optional CREW/EFFORT/SAVE/INPUT
+make run      # Run with PROMPT plus optional CREW/EFFORT/SAVE/INPUT/OUTPUT_FORMAT
 make run-new  # Force planner generation from scratch
 make promote  # Promote a generated crew via PROMOTE=name
 make test     # Compile-check Python files and validate start.sh syntax
@@ -158,6 +163,7 @@ Examples:
 ```bash
 make run PROMPT="compare the top 3 note-taking apps"
 make run CREW=research EFFORT=quick PROMPT="find jazz festivals in Berlin 2026"
+make run OUTPUT_FORMAT=html PROMPT="create a standalone HTML landing page for a Berlin jazz guide"
 make run-new EFFORT=standard PROMPT="find trödelmärkte in Kreis Steinfurt in April and May 2026"
 make promote PROMOTE=event_scout
 ```
@@ -175,6 +181,19 @@ When you run a task without specifying `--crew`, the planner:
 
 If the planner fails for any reason, the system falls back to keyword-based routing.
 If you want to bypass reuse and adaptation for a run, use `--new`.
+
+## Output files
+
+Every run writes:
+
+- `outputs/latest.txt`
+- `outputs/latest.json`
+
+If the result looks like HTML, or you explicitly set `--format html` / `OUTPUT_FORMAT=html`, the runtime also writes:
+
+- `outputs/latest.html`
+
+Timestamped per-run files follow the same behavior.
 
 ## Crew lifecycle
 
