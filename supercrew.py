@@ -53,6 +53,62 @@ def _normalize_output_format(value: str | None) -> str:
     return "auto"
 
 
+def _patch_supports_function_calling(
+    target_class: type,
+    *,
+    disabled_models: set[str],
+    marker_name: str,
+) -> None:
+    if getattr(target_class, marker_name, False):
+        return
+
+    original_method = getattr(target_class, "supports_function_calling", None)
+    if not callable(original_method):
+        return
+
+    def patched(self) -> bool:
+        model_name = str(getattr(self, "model", "") or "")
+        if model_name in disabled_models:
+            return False
+        override = getattr(self, "_agent_mesh_supports_function_calling", None)
+        if override is not None:
+            return bool(override)
+        return original_method(self)
+
+    setattr(target_class, "supports_function_calling", patched)
+    setattr(target_class, marker_name, True)
+
+
+def _apply_crewai_capability_overrides() -> None:
+    try:
+        from agent_mesh.config_loader import load_models_config
+        from crewai.llm import LLM
+        from crewai.llms.providers.openai.completion import OpenAICompletion
+    except Exception:
+        return
+
+    models_config = load_models_config()
+    disabled_models = {
+        str(profile.get("provider_model") or "").strip()
+        for profile in models_config.get("models", {}).values()
+        if profile.get("supports_function_calling") is False
+    }
+    disabled_models.discard("")
+    if not disabled_models:
+        return
+
+    _patch_supports_function_calling(
+        LLM,
+        disabled_models=disabled_models,
+        marker_name="_agent_mesh_supports_function_calling_patch",
+    )
+    _patch_supports_function_calling(
+        OpenAICompletion,
+        disabled_models=disabled_models,
+        marker_name="_agent_mesh_supports_function_calling_patch",
+    )
+
+
 def _suppress_crewai_trace_prompts() -> None:
     try:
         from crewai.events.listeners.tracing.utils import set_suppress_tracing_messages
@@ -162,6 +218,7 @@ def _save_result(result: object) -> Path | None:
 def main() -> None:
     from agent_mesh.runner import run_from_env
 
+    _apply_crewai_capability_overrides()
     _suppress_crewai_trace_prompts()
     result = run_from_env()
     saved_path = _save_result(result)

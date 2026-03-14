@@ -107,3 +107,43 @@ def test_suppress_crewai_trace_prompts_uses_crewai_hook(monkeypatch):
     MODULE._suppress_crewai_trace_prompts()
 
     assert sentinel == {"called": True, "value": True}
+
+
+def test_apply_crewai_capability_overrides_disables_models_from_config(monkeypatch):
+    llm_mod = types.ModuleType("crewai.llm")
+    openai_mod = types.ModuleType("crewai.llms.providers.openai.completion")
+    config_mod = types.ModuleType("agent_mesh.config_loader")
+
+    class FakeLLM:
+        def __init__(self, model):
+            self.model = model
+
+        def supports_function_calling(self):
+            return True
+
+    class FakeOpenAICompletion:
+        def __init__(self, model):
+            self.model = model
+
+        def supports_function_calling(self):
+            return True
+
+    llm_mod.LLM = FakeLLM
+    openai_mod.OpenAICompletion = FakeOpenAICompletion
+    config_mod.load_models_config = lambda: {
+        "models": {
+            "swarm": {"provider_model": "local-swarm", "supports_function_calling": False},
+            "clever": {"provider_model": "local-clever", "supports_function_calling": False},
+            "cloud": {"provider_model": "cloud-fast", "supports_function_calling": True},
+        }
+    }
+
+    monkeypatch.setitem(sys.modules, "crewai.llm", llm_mod)
+    monkeypatch.setitem(sys.modules, "crewai.llms.providers.openai.completion", openai_mod)
+    monkeypatch.setitem(sys.modules, "agent_mesh.config_loader", config_mod)
+
+    MODULE._apply_crewai_capability_overrides()
+
+    assert FakeLLM("local-swarm").supports_function_calling() is False
+    assert FakeOpenAICompletion("local-clever").supports_function_calling() is False
+    assert FakeLLM("cloud-fast").supports_function_calling() is True
