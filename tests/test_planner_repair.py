@@ -172,6 +172,64 @@ def test_html_output_adds_final_html_hints():
     assert "html" in task["expected_output"].lower()
 
 
+def test_broad_verify_task_gets_search_context_and_becomes_sync():
+    payload = {
+        "decision": "generate",
+        "crew_spec": {
+            "name": "festival_crew",
+            "description": "festival_crew",
+            "tags": [],
+            "query_archetypes": [],
+            "agents": [
+                {
+                    "name": "researcher",
+                    "role": "Researcher",
+                    "goal": "Find festivals",
+                    "backstory": "Find festivals",
+                    "model_profile": "swarm",
+                    "tools": ["searxng_search"],
+                    "allow_delegation": False,
+                    "role_archetype": "researcher",
+                },
+                {
+                    "name": "verifier",
+                    "role": "Verifier",
+                    "goal": "Verify festival details",
+                    "backstory": "Verify official details",
+                    "model_profile": "swarm",
+                    "tools": ["searxng_search", "webpage_fetch"],
+                    "allow_delegation": False,
+                    "role_archetype": "deep_researcher",
+                },
+            ],
+            "tasks": [
+                {
+                    "name": "search_festivals",
+                    "description": "Search for all music festivals in Hungary 2026",
+                    "expected_output": "List of all festivals and candidate events",
+                    "agent": "researcher",
+                    "context": [],
+                    "async_execution": True,
+                },
+                {
+                    "name": "verify_festival_details",
+                    "description": "Verify ticket prices and lineup from official sources",
+                    "expected_output": "Verified festival details from official sources",
+                    "agent": "verifier",
+                    "context": [],
+                    "async_execution": True,
+                },
+            ],
+        },
+    }
+
+    repaired = repair_planner_output(payload)
+
+    verify_task = repaired["crew_spec"]["tasks"][1]
+    assert verify_task["async_execution"] is False
+    assert verify_task["context"] == ["search_festivals"]
+
+
 if __name__ == "__main__":
     import pytest
 

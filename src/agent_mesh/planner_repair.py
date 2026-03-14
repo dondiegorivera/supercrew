@@ -114,6 +114,66 @@ def _apply_html_output_hints(spec: dict[str, Any]) -> dict[str, Any]:
     return spec
 
 
+def _looks_like_broad_search_task(task: dict[str, Any]) -> bool:
+    text = " ".join(
+        [
+            str(task.get("name") or ""),
+            str(task.get("description") or ""),
+            str(task.get("expected_output") or ""),
+        ]
+    ).lower()
+    return any(keyword in text for keyword in ("search", "find", "discover", "list")) and any(
+        keyword in text for keyword in ("all ", "festival", "events", "candidates")
+    )
+
+
+def _looks_like_verification_task(task: dict[str, Any]) -> bool:
+    text = " ".join(
+        [
+            str(task.get("name") or ""),
+            str(task.get("description") or ""),
+            str(task.get("expected_output") or ""),
+        ]
+    ).lower()
+    return any(
+        keyword in text
+        for keyword in ("verify", "verification", "fact-check", "fact check", "ticket", "lineup", "official")
+    )
+
+
+def _repair_broad_verify_tasks(spec: dict[str, Any]) -> dict[str, Any]:
+    tasks = _listify(spec.get("tasks"))
+    if len(tasks) < 2:
+        return spec
+
+    search_task_names = [
+        str(task.get("name") or "")
+        for task in tasks
+        if isinstance(task, dict) and _looks_like_broad_search_task(task)
+    ]
+    if not search_task_names:
+        return spec
+
+    for task in tasks:
+        if not isinstance(task, dict) or not _looks_like_verification_task(task):
+            continue
+        task_name = str(task.get("name") or "")
+        context = [str(item) for item in _listify(task.get("context"))]
+        for search_task_name in search_task_names:
+            if (
+                search_task_name
+                and search_task_name != task_name
+                and search_task_name not in context
+            ):
+                context.append(search_task_name)
+        task["context"] = context
+        if task.get("async_execution"):
+            task["async_execution"] = False
+
+    spec["tasks"] = tasks
+    return spec
+
+
 def repair_planner_output(raw: dict[str, Any], *, output_format: str = "auto") -> dict[str, Any]:
     """Apply normalization rules to raw parsed JSON from the planner LLM."""
     repaired = copy.deepcopy(raw)
@@ -215,6 +275,7 @@ def repair_planner_output(raw: dict[str, Any], *, output_format: str = "auto") -
 
     spec["agents"] = repaired_agents
     spec["tasks"] = repaired_tasks
+    spec = _repair_broad_verify_tasks(spec)
     if output_format == "html":
         spec = _apply_html_output_hints(spec)
     repaired["crew_spec"] = spec
