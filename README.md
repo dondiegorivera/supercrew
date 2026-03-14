@@ -196,6 +196,23 @@ If the result looks like HTML, or you explicitly set `--format html` / `OUTPUT_F
 Timestamped per-run files follow the same behavior.
 When `html` is requested explicitly, the planner is also nudged to generate a final writer-oriented task that outputs standalone HTML.
 
+## HTML output
+
+If you want an HTML deliverable, use one of these:
+
+```bash
+./start.sh --format html "create a standalone HTML landing page for a Berlin jazz guide"
+OUTPUT_FORMAT=html ./start.sh "summarize these findings as a standalone HTML report"
+```
+
+What to expect:
+
+- The planner is nudged to generate a final writer/presentation step aimed at standalone HTML.
+- The final artifact is still printed to stdout.
+- The runtime saves `outputs/latest.html` in addition to `outputs/latest.txt` and `outputs/latest.json`.
+
+If you leave the format at `auto`, the runtime will still save `.html` when the final answer already looks like HTML.
+
 ## Crew lifecycle
 
 ```
